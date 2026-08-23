@@ -229,7 +229,6 @@
         "type": "Project",
         "dependencies": {
           "AppLedger.Core": "[0.1.0, )",
-          "AppLedger.Ipc": "[0.1.0, )",
           "Dapper": "[2.1.66, )",
           "MaxMind.Db": "[4.2.0, )",
           "Microsoft.Data.Sqlite": "[10.0.9, )",
@@ -237,12 +236,6 @@
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.9, )",
           "NSec.Cryptography": "[25.4.0, )",
           "Serilog": "[4.3.0, )"
-        }
-      },
-      "appledger.ipc": {
-        "type": "Project",
-        "dependencies": {
-          "AppLedger.Core": "[0.1.0, )"
         }
       },
       "Dapper": {

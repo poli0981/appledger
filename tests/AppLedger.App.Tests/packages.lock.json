@@ -630,7 +630,6 @@
         "type": "Project",
         "dependencies": {
           "AppLedger.Core": "[0.1.0, )",
-          "AppLedger.Ipc": "[0.1.0, )",
           "Dapper": "[2.1.66, )",
           "MaxMind.Db": "[4.2.0, )",
           "Microsoft.Data.Sqlite": "[10.0.9, )",
