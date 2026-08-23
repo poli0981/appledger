@@ -113,6 +113,12 @@ Percent values are stored as `REAL` 0–100 with one decimal; bytes as `INTEGER`
 The S1 harness (`spikes/S1.EtwBudget`) hosts this library with the real sessions and logs its own CPU/RSS every 10 s.
 Budget violations in S1 block feature work (`20_SPIKES.md`).
 
+**Where the budget actually binds.** S1-lite (2026-08-23) measured ~75 MB private working set for the two sessions
+alone, with handlers that only increment counters, and 0.03 % CPU. Against a 100 MB budget that leaves roughly
+20 MB for every structure on this page plus the SQLite page cache (`06_DATA_MODEL.md` sets it to 32 MB in the
+Agent). Memory, not CPU, is therefore the number to hold a v0.2 design against: size the accumulators, the ring
+and the DB cache together, and re-measure with S1 rather than assuming the CPU headroom transfers.
+
 ## Failure handling
 
 - Every sensor implements `ISensor { Task StartAsync; Task StopAsync; SensorHealth Health; }`; `CollectorHost`

@@ -34,6 +34,36 @@ Runs **before** the Collector exists, so the premise behind ADR-3 is tested at k
 - **Fail ->** the reductions listed under S1 apply, and the finding is recorded before any Collector code is written.
 - S1-lite does **not** replace S1: it has no accumulators, no rollups, no 48-hour run and no game/anti-cheat leg.
 
+### Result (2026-08-23, PASS)
+
+All four criteria met, but the two margins are very different and that is the useful part:
+
+| Criterion | Budget | Measured | Margin |
+|---|---|---|---|
+| CPU, peak 5-min average | < 1 % idle, < 3 % load | **0.03 %** | ~30x |
+| Private working set, peak | < 100 MB | **79.7 MB** | 1.25x |
+| `EventsLost` (kernel / user) | 0 | **0 / 0** | — |
+| Handler exceptions | 0 | **0** | — |
+
+Two caveats that matter more than the numbers, and that v0.2 has to design around:
+
+1. **RAM is the binding constraint, not CPU.** ~75 MB is the *floor*: a .NET process holding these two sessions
+   with handlers that do nothing but increment a counter, before a single accumulator exists. The working set was
+   flat (+0.6 MB over the last 35 minutes), so this is a baseline rather than a leak. What still has to fit in the
+   remaining ~20 MB: the per-instance accumulators, the 1-hour snapshot ring (~2 MB per `05_COLLECTOR.md`), the DNS
+   map (10 k entries), the endpoint maps (2 000 per app), Serilog buffers, the pipe server — and the SQLite page
+   cache, which `06_DATA_MODEL.md` sets to `cache_size=-32000`, i.e. **32 MB on its own**. 75 + 32 already exceeds
+   the budget, so that pragma is a v0.2 decision, not a detail.
+2. **The CPU figure is a floor, not a prediction.** TraceEvent decodes event payloads lazily, and these handlers
+   read no fields at all, so almost no parsing ran. The real Collector reads `ProcessID`, `size`, `daddr` and
+   `dport` on every network event — at 12 k events/s sustained, that is where the cost will actually appear.
+   S1 (full, after v0.2) is what measures it.
+
+Two smaller notes: the kernel session's 64 MB buffer absorbed a 19.6 k events/s peak with zero loss on this box, so
+buffer sizing is not the first thing to reduce if RAM gets tight; and the harness enabled the DNS session through
+`Dynamic.All` rather than filtering to event IDs 3006/3008 as this document specifies, which makes the user-session
+cost an upper bound.
+
 ## S1 — Agent budget (`spikes/S1.EtwBudget`)
 
 - **Harness:** hosts `AppLedger.Collector` with `Privilege=Elevated`, the real `AppLedger-Kernel` + `AppLedger-User`
@@ -144,7 +174,7 @@ Runs **before** the Collector exists, so the premise behind ADR-3 is tested at k
 
 | Spike | Date | Box | Result | Numbers / link |
 |---|---|---|---|---|
-| S1-lite | 2026-08-23 | — | harness ready, **not run** | needs an elevated terminal: `dotnet run -c Release --project spikes/S1.EtwBudget -- --minutes 45 --out s1-lite.csv` |
+| S1-lite | 2026-08-23 | i7-14700KF (20C/28T), 32 GB, Win 11 Insider 29648, x64 | **PASS** | 45 min. Peak 5-min CPU **0.03 %** (2.4 s CPU total); private WS **79.7 MB** peak, +0.6 MB drift after the first 10 min; `EventsLost` **0/0**; 0 handler errors. 7.72 M network, 167 k disk, 40.6 k image, 11.7 k DNS, 1 649 process events; sustained 12.2 k network ev/s in the busiest 5 min, 19.6 k ev/s peak. See the Result note above. |
 | S1 | — | — | not run | |
 | S2 | — | — | not run | |
 | S3 | — | — | not run | |

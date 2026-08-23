@@ -8,7 +8,9 @@ Infrastructure (`Migrations/0001_initial.sql`, …) and run inside a transaction
 ## Pragmas
 
 `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `auto_vacuum=INCREMENTAL`, `busy_timeout=5000`,
-`temp_store=MEMORY`, `cache_size=-32000` (32 MB) in the Agent, `-8000` in the UI. The UI opens with `Mode=ReadOnly`
+`temp_store=MEMORY`, `cache_size=-32000` (32 MB) in the Agent, `-8000` in the UI. **The Agent value is provisional:**
+S1-lite measured a ~75 MB floor before any storage existed, so a 32 MB page cache would breach the 100 MB budget on
+its own (`20_SPIKES.md` S1-lite Result). Settle it with a measurement in v0.2, not by assumption. The UI opens with `Mode=ReadOnly`
 for all metric tables and a second `ReadWrite` connection only for `settings`/`app_overrides`.
 
 ## Ownership
