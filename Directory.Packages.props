@@ -31,7 +31,10 @@
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
     <PackageVersion Include="Dapper" Version="2.1.66" />
     <!-- Transitive pins: Microsoft.Data.Sqlite 10.0.9 resolves SQLitePCLRaw 2.1.11, which carries
-         GHSA-2m69-gcr7-jv3q (high). Lifted via CentralPackageTransitivePinningEnabled. docs/24_ADR.md. -->
+         GHSA-2m69-gcr7-jv3q (high). Lifted via CentralPackageTransitivePinningEnabled. docs/24_ADR.md.
+         These exist only to lift that advisory. Remove them once Microsoft.Data.Sqlite itself resolves a
+         fixed SQLitePCLRaw, and do NOT take a Dependabot bump to the 3.x line on its own: the version
+         has to stay whatever Microsoft.Data.Sqlite expects. -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />   <!-- [checked 2026-08-23] -->
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
     <PackageVersion Include="SQLitePCLRaw.core" Version="2.1.13" />
@@ -44,7 +47,7 @@
     <!-- Packaging -->
     <PackageVersion Include="Velopack" Version="1.2.0" />                                   <!-- [checked 2026-08-22] -->
     <!-- Analyzers -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />  <!-- [checked 2026-08-23] 3.11.0 is prerelease-only -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />  <!-- [checked 2026-08-23] the 3.11.0 this file first named has no stable release -->
     <!-- Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />

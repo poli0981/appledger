@@ -68,6 +68,20 @@ Weekly NuGet and Actions updates; Microsoft/System and Serilog grouped; `WPF-UI*
 by hand after reading the release notes (`Directory.Packages.props` header). Velopack and TraceEvent bumps
 require a manual S1 rerun, because both sit directly in the collector path.
 
+**Every NuGet PR needs one manual step.** With Central Package Management, one `PackageVersion` is consumed by
+several projects, but Dependabot refreshes only some of their `packages.lock.json` files — it updated 3 of 9
+for the analyzer bump and 2 of 4 for coverlet. `--locked-mode` then fails with **NU1004** on the projects it
+missed, so the PR cannot pass CI as it arrives. The fix is one command on the PR branch:
+
+```powershell
+dotnet restore AppLedger.slnx --force-evaluate
+```
+
+Commit the regenerated lock files onto the Dependabot branch and merge. Do this **before** the first merge of
+a batch: two Dependabot PRs that both regenerate lock files will conflict, so merge one, rebase the next onto
+the new `main`, regenerate again, and only then merge it. Squash-merge either way — `main` requires linear
+history.
+
 ## Secrets (repo settings)
 
 | Secret | Used by | Required for |
