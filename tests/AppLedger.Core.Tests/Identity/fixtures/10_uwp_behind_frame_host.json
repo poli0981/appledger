@@ -1,0 +1,32 @@
+{
+  "name": "10_uwp_behind_frame_host",
+  "scenario": "ApplicationFrameHost hosts a UWP window but is not the app; the CoreWindow owner is.",
+  "indexes": {
+    "msix": [
+      "Microsoft.WindowsCalculator_8wekyb3d8bbwe"
+    ]
+  },
+  "processes": [
+    {
+      "pid": 13100,
+      "createTime": 10000,
+      "imageName": "ApplicationFrameHost.exe",
+      "image": "C:\\Windows\\System32\\ApplicationFrameHost.exe",
+      "cmdline": "C:\\Windows\\system32\\ApplicationFrameHost.exe -Embedding",
+      "signer": "Microsoft Windows",
+      "expect": "sys:windows",
+      "why": "Tier-0 image path and a system host rule: it is a Windows component"
+    },
+    {
+      "pid": 13101,
+      "createTime": 10002,
+      "imageName": "CalculatorApp.exe",
+      "image": "C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator_11.2402.0_x64__8wekyb3d8bbwe\\CalculatorApp.exe",
+      "cmdline": "CalculatorApp.exe -ServerName:App.AppX...",
+      "signer": "Microsoft Corporation",
+      "packageFamily": "Microsoft.WindowsCalculator_8wekyb3d8bbwe",
+      "expect": "msix:Microsoft.WindowsCalculator_8wekyb3d8bbwe",
+      "why": "the real app, found through the CoreWindow owner (FR-19)"
+    }
+  ]
+}

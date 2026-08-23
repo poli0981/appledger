@@ -17,3 +17,10 @@ csharp_prefer_braces = true:warning
 dotnet_diagnostic.CA1062.severity = none
 [*.xaml]
 indent_size = 4
+
+# Test and spike projects only.
+[{tests,spikes}/**/*.cs]
+# docs/19_TESTING.md mandates Method_Scenario_Expectation test names, which CA1707 forbids.
+dotnet_diagnostic.CA1707.severity = none
+# Fixture builders and harnesses legitimately use literal paths and hand-rolled helpers.
+dotnet_diagnostic.CA1861.severity = none

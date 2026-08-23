@@ -1,0 +1,47 @@
+{
+  "description": "Five 1-second samples of cat:discord folded into one metrics_1m row.",
+  "why": "Small enough to check by hand: procs/cpu/wsPrivate rise 1..5, netIn rises 100..500, and every other field is constant per second. Sums must be 5x the per-second value, averages the midpoint, maxima the last sample.",
+  "source": "docs/05_COLLECTOR.md #Rollup math",
+  "bucket_start_utc": "1787443200",
+  "input": {
+    "count": 5,
+    "procs": [1, 2, 3, 4, 5],
+    "cpu_pct": [10, 20, 30, 40, 50],
+    "ws_private": [1000, 2000, 3000, 4000, 5000],
+    "net_in": [100, 200, 300, 400, 500],
+    "per_second_constants": {
+      "net_out": "net_in / 2",
+      "disk_read": 100,
+      "disk_write": 200,
+      "disk_ops": 3,
+      "io_read": 400,
+      "io_write": 500,
+      "cpu_user_ms": 10,
+      "cpu_kernel_ms": 5,
+      "threads": 20,
+      "handles": 300,
+      "hard_faults": 1,
+      "commit_bytes": "ws_private + 1000",
+      "ws": "ws_private + 2000"
+    }
+  },
+  "expected": {
+    "runtime_s": 5,
+    "procs": 3.0,
+    "procs_max": 5,
+    "cpu_pct": 30.0,
+    "cpu_pct_max": 50.0,
+    "cpu_user_ms": 50,
+    "cpu_kernel_ms": 25,
+    "ws_private": 3000,
+    "ws_private_max": 5000,
+    "commit_bytes": 4000,
+    "net_in": 1500,
+    "net_out": 750,
+    "disk_read": 500,
+    "disk_write": 1000,
+    "threads": 20.0,
+    "handles": 300.0,
+    "degraded": false
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "name": "08_vscode_git_node",
+  "scenario": "A tool with its own identity keeps it even when the editor spawned it; an extension host does not.",
+  "indexes": {
+    "uninstall": [
+      {
+        "key": "Microsoft Visual Studio Code",
+        "displayName": "Microsoft Visual Studio Code",
+        "installLocation": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Microsoft VS Code",
+        "publisher": "Microsoft Corporation"
+      },
+      {
+        "key": "Git_is1",
+        "displayName": "Git",
+        "installLocation": "C:\\Program Files\\Git",
+        "publisher": "The Git Development Community"
+      }
+    ]
+  },
+  "processes": [
+    {
+      "pid": 11100,
+      "createTime": 8000,
+      "imageName": "Code.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
+      "cmdline": "\"C:\\Users\\fixture\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe\"",
+      "signer": "Microsoft Corporation",
+      "expect": "cat:vscode"
+    },
+    {
+      "pid": 11101,
+      "createTime": 8002,
+      "imageName": "Code.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
+      "cmdline": "Code.exe --type=renderer",
+      "signer": "Microsoft Corporation",
+      "parentPid": 11100,
+      "parentCreateTime": 8000,
+      "expect": "cat:vscode"
+    },
+    {
+      "pid": 11102,
+      "createTime": 8004,
+      "imageName": "node.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
+      "cmdline": "Code.exe --type=extensionHost",
+      "signer": "Microsoft Corporation",
+      "parentPid": 11100,
+      "parentCreateTime": 8000,
+      "expect": "cat:vscode",
+      "why": "the extension host is a Code child under the Code root"
+    },
+    {
+      "pid": 11103,
+      "createTime": 8006,
+      "imageName": "git.exe",
+      "image": "C:\\Program Files\\Git\\cmd\\git.exe",
+      "cmdline": "git.exe status --porcelain",
+      "signer": "Johannes Schindelin",
+      "parentPid": 11100,
+      "parentCreateTime": 8000,
+      "expect": "uninst:git-is1",
+      "why": "a child with its own uninstall identity is never adopted (adoption rule 3)"
+    }
+  ]
+}

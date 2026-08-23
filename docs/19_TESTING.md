@@ -17,6 +17,7 @@ an elevated developer box.
 | IPC | `AppLedger.Collector.Tests` | CI | in-proc pipe server/client over a random pipe name: framing (length prefix, 4 MB cap, oversized rejected), version negotiation, `Subscribe`/`AppsTick` cadence, `PolicyDenied` on a Tier-0 `ScanNow`, peer verification stubbed |
 | UI | `AppLedger.App.Tests` | CI | view-model tests (no XAML): Home/Apps/AppDetail/Settings VMs against a fake `IAgentClient` + fake `ILedgerReader`; `ChartRange` math; `ByteFormatter` per culture; every `Strings.resx` key exists in `vi`/`ja` (missing → test failure, not warning); XAML compiles; navigation smoke: every `TargetPageType` is registered in DI |
 | Admin (real sessions) | `Infrastructure.Tests`, `Category=Admin` | elevated dev box only | start `AppLedger-Kernel`/`AppLedger-User` sessions, observe own process's TCP send, own DNS query, own file write; stale-session reclaim; lost-event counter wiring |
+| Repository guards | `AppLedger.Core.Tests` | CI | invariants that leave no trace in a diff: no `--` inside an XML comment (it makes a project file unloadable), no invisible characters in source (a stray NBSP in a literal formats right and compares wrong), every project declares `<Platforms>x64;ARM64</Platforms>` (ADR-16), and `BannedSymbols.txt` still bans every forbidden `PROCESS_*` right |
 | Manual | `Category=Manual` + checklist below | release | installs, onboarding, VM matrix |
 | Budget | `spikes/S1.EtwBudget` | release build, 12 h | numbers pasted into release notes (`16` §Release checklist) |
 

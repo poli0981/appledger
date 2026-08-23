@@ -1,0 +1,60 @@
+{
+  "name": "02_discord",
+  "scenario": "A Squirrel-style versioned install directory must not fork the app on every update.",
+  "indexes": {
+    "uninstall": [
+      {
+        "key": "Discord",
+        "displayName": "Discord",
+        "installLocation": "C:\\Users\\fixture\\AppData\\Local\\Discord",
+        "publisher": "Discord Inc."
+      }
+    ]
+  },
+  "processes": [
+    {
+      "pid": 5100,
+      "createTime": 2000,
+      "imageName": "Discord.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Discord\\app-1.0.9195\\Discord.exe",
+      "cmdline": "\"C:\\Users\\fixture\\AppData\\Local\\Discord\\app-1.0.9195\\Discord.exe\"",
+      "signer": "Discord Inc.",
+      "expect": "cat:discord",
+      "why": "catalog rule wins over the uninstall entry (docs/03 precedence)"
+    },
+    {
+      "pid": 5101,
+      "createTime": 2002,
+      "imageName": "Discord.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Discord\\app-1.0.9195\\Discord.exe",
+      "cmdline": "Discord.exe --type=renderer",
+      "signer": "Discord Inc.",
+      "parentPid": 5100,
+      "parentCreateTime": 2000,
+      "expect": "cat:discord"
+    },
+    {
+      "pid": 5102,
+      "createTime": 2003,
+      "imageName": "Discord.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Discord\\app-1.0.9195\\Discord.exe",
+      "cmdline": "Discord.exe --type=gpu-process",
+      "signer": "Discord Inc.",
+      "parentPid": 5100,
+      "parentCreateTime": 2000,
+      "expect": "cat:discord"
+    },
+    {
+      "pid": 5103,
+      "createTime": 2004,
+      "imageName": "Update.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Discord\\Update.exe",
+      "cmdline": "Update.exe --processStart Discord.exe",
+      "signer": "Discord Inc.",
+      "parentPid": 5100,
+      "parentCreateTime": 2000,
+      "expect": "cat:discord",
+      "why": "listed as a helper and lives under the app root"
+    }
+  ]
+}

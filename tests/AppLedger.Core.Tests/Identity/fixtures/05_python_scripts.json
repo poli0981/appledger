@@ -1,0 +1,39 @@
+{
+  "name": "05_python_scripts",
+  "scenario": "Two scripts run by the same interpreter are two apps; the interpreter itself is neither.",
+  "indexes": {},
+  "processes": [
+    {
+      "pid": 8100,
+      "createTime": 5000,
+      "imageName": "python.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "cmdline": "python.exe C:\\Work\\scraper.py --once",
+      "signer": "Python Software Foundation",
+      "expect": "script:1f2e3d4c5b6a7988",
+      "why": "first non-option argument with an extension becomes the identity"
+    },
+    {
+      "pid": 8101,
+      "createTime": 5002,
+      "imageName": "python.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "cmdline": "python.exe -m http.server 8000",
+      "signer": "Python Software Foundation",
+      "expect": "script:99887766554433aa",
+      "why": "-m module also yields a script identity, distinct from the file case"
+    },
+    {
+      "pid": 8102,
+      "createTime": 5004,
+      "imageName": "python.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "cmdline": "python.exe",
+      "signer": "Python Software Foundation",
+      "productName": "Python",
+      "companyName": "Python Software Foundation",
+      "expect": "root:5d4c3b2a19087766",
+      "why": "no script argument: the runtime falls back to its own install root"
+    }
+  ]
+}

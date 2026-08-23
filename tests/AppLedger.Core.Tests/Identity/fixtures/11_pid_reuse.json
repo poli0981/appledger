@@ -1,0 +1,48 @@
+{
+  "name": "11_pid_reuse",
+  "scenario": "A recycled PID must not let an unrelated process be adopted by the app that used to own it.",
+  "indexes": {
+    "uninstall": [
+      {
+        "key": "Discord",
+        "displayName": "Discord",
+        "installLocation": "C:\\Users\\fixture\\AppData\\Local\\Discord",
+        "publisher": "Discord Inc."
+      }
+    ]
+  },
+  "processes": [
+    {
+      "pid": 14100,
+      "createTime": 11000,
+      "imageName": "Discord.exe",
+      "image": "C:\\Users\\fixture\\AppData\\Local\\Discord\\app-1.0.9195\\Discord.exe",
+      "cmdline": "\"C:\\Users\\fixture\\AppData\\Local\\Discord\\app-1.0.9195\\Discord.exe\"",
+      "signer": "Discord Inc.",
+      "expect": "cat:discord",
+      "why": "the original parent; it exits before the next entry starts"
+    },
+    {
+      "pid": 14100,
+      "createTime": 11500,
+      "imageName": "notepad.exe",
+      "image": "C:\\Windows\\System32\\notepad.exe",
+      "cmdline": "notepad.exe",
+      "signer": "Microsoft Windows",
+      "expect": "sys:windows",
+      "why": "same pid, later create time: a different instance entirely"
+    },
+    {
+      "pid": 14200,
+      "createTime": 11600,
+      "imageName": "Update.exe",
+      "image": "D:\\Portable\\Updater\\Update.exe",
+      "cmdline": "Update.exe",
+      "parentPid": 14100,
+      "parentCreateTime": 11000,
+      "productName": "Updater",
+      "expect": "root:9c0d2b45e6f7a819",
+      "why": "its recorded parent exited; adoption must not resurrect it through the recycled pid"
+    }
+  ]
+}

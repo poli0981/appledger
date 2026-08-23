@@ -1,0 +1,152 @@
+{
+  "name": "03_steam_game_anticheat",
+  "scenario": "Launcher, its helpers, a protected game and the anti-cheat service are three apps, and the game is Tier 2.",
+  "indexes": {
+    "uninstall": [
+      {
+        "key": "Steam",
+        "displayName": "Steam",
+        "installLocation": "C:\\Program Files (x86)\\Steam",
+        "publisher": "Valve Corp."
+      }
+    ],
+    "steam": [
+      {
+        "id": "1091500",
+        "installLocation": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\ProtectedGame",
+        "name": "ProtectedGame"
+      }
+    ],
+    "services": [
+      "EasyAntiCheat"
+    ],
+    "loadedDrivers": [
+      "EasyAntiCheat.sys"
+    ]
+  },
+  "processes": [
+    {
+      "pid": 6100,
+      "createTime": 3000,
+      "imageName": "steam.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\steam.exe",
+      "cmdline": "\"C:\\Program Files (x86)\\Steam\\steam.exe\"",
+      "signer": "Valve Corp.",
+      "expect": "cat:steam"
+    },
+    {
+      "pid": 6110,
+      "createTime": 3002,
+      "imageName": "steamwebhelper.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\bin\\cef\\cef.win7x64\\steamwebhelper.exe",
+      "cmdline": "steamwebhelper.exe --type=renderer",
+      "signer": "Valve Corp.",
+      "parentPid": 6100,
+      "parentCreateTime": 3000,
+      "expect": "cat:steam",
+      "why": "helper under the launcher root stays with the launcher"
+    },
+    {
+      "pid": 6111,
+      "createTime": 3003,
+      "imageName": "steamwebhelper.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\bin\\cef\\cef.win7x64\\steamwebhelper.exe",
+      "cmdline": "steamwebhelper.exe --type=renderer",
+      "signer": "Valve Corp.",
+      "parentPid": 6100,
+      "parentCreateTime": 3000,
+      "expect": "cat:steam",
+      "why": "helper under the launcher root stays with the launcher"
+    },
+    {
+      "pid": 6112,
+      "createTime": 3004,
+      "imageName": "steamwebhelper.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\bin\\cef\\cef.win7x64\\steamwebhelper.exe",
+      "cmdline": "steamwebhelper.exe --type=renderer",
+      "signer": "Valve Corp.",
+      "parentPid": 6100,
+      "parentCreateTime": 3000,
+      "expect": "cat:steam",
+      "why": "helper under the launcher root stays with the launcher"
+    },
+    {
+      "pid": 6113,
+      "createTime": 3005,
+      "imageName": "steamwebhelper.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\bin\\cef\\cef.win7x64\\steamwebhelper.exe",
+      "cmdline": "steamwebhelper.exe --type=renderer",
+      "signer": "Valve Corp.",
+      "parentPid": 6100,
+      "parentCreateTime": 3000,
+      "expect": "cat:steam",
+      "why": "helper under the launcher root stays with the launcher"
+    },
+    {
+      "pid": 6114,
+      "createTime": 3006,
+      "imageName": "steamwebhelper.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\bin\\cef\\cef.win7x64\\steamwebhelper.exe",
+      "cmdline": "steamwebhelper.exe --type=renderer",
+      "signer": "Valve Corp.",
+      "parentPid": 6100,
+      "parentCreateTime": 3000,
+      "expect": "cat:steam",
+      "why": "helper under the launcher root stays with the launcher"
+    },
+    {
+      "pid": 6115,
+      "createTime": 3007,
+      "imageName": "steamwebhelper.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\bin\\cef\\cef.win7x64\\steamwebhelper.exe",
+      "cmdline": "steamwebhelper.exe --type=renderer",
+      "signer": "Valve Corp.",
+      "parentPid": 6100,
+      "parentCreateTime": 3000,
+      "expect": "cat:steam",
+      "why": "helper under the launcher root stays with the launcher"
+    },
+    {
+      "pid": 6120,
+      "createTime": 3010,
+      "imageName": "GameOverlayUI.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\GameOverlayUI.exe",
+      "cmdline": "GameOverlayUI.exe",
+      "signer": "Valve Corp.",
+      "parentPid": 6100,
+      "parentCreateTime": 3000,
+      "expect": "cat:steam"
+    },
+    {
+      "pid": 6200,
+      "createTime": 3020,
+      "imageName": "ProtectedGame.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\ProtectedGame\\ProtectedGame.exe",
+      "parentPid": 6100,
+      "parentCreateTime": 3000,
+      "expect": "steam:1091500",
+      "expectTier": 2,
+      "why": "under a game root, so it is its own app - never merged into the launcher"
+    },
+    {
+      "pid": 6201,
+      "createTime": 3022,
+      "imageName": "start_protected_game.exe",
+      "image": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\ProtectedGame\\start_protected_game.exe",
+      "parentPid": 6200,
+      "parentCreateTime": 3020,
+      "expect": "steam:1091500",
+      "expectTier": 2,
+      "why": "anticheat helper inside the game root belongs to the game"
+    },
+    {
+      "pid": 6300,
+      "createTime": 3030,
+      "imageName": "EasyAntiCheat.exe",
+      "image": "C:\\Program Files (x86)\\EasyAntiCheat\\EasyAntiCheat.exe",
+      "expect": "cat:eac",
+      "expectTier": 2,
+      "why": "the anti-cheat service is its own app, not the game"
+    }
+  ]
+}

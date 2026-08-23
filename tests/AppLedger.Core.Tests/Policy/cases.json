@@ -1,0 +1,28 @@
+[
+  { "path": "C:\\Windows\\System32", "tier": "ProtectedOs", "reason": "ProtectedOs", "note": "the plain case" },
+  { "path": "\\\\?\\C:\\Windows\\System32\\", "tier": "ProtectedOs", "reason": "ProtectedOs", "note": "extended-length prefix must not hide it" },
+  { "path": "C:\\Windows\\System32\\drivers\\etc\\hosts:stream", "tier": "ProtectedOs", "reason": "ProtectedOs", "note": "ADS suffix stripped first" },
+  { "path": "C:\\Windows\\..\\Windows\\System32", "tier": "ProtectedOs", "reason": "ProtectedOs", "note": "traversal resolved before comparison" },
+  { "path": "C:\\Windows\\System32\\..\\..\\Users\\fixture\\Games", "tier": "WriteProtected", "reason": "None", "note": "traversal genuinely leaves Windows" },
+  { "path": "c:\\windows\\system32", "tier": "ProtectedOs", "reason": "ProtectedOs", "note": "case-insensitive" },
+  { "path": "C:\\Windows.\\System32", "tier": "ProtectedOs", "reason": "ProtectedOs", "note": "trailing dot on a component is dropped by Windows" },
+  { "path": "C:\\Program Files\\WindowsApps\\Some.Package_1.0", "tier": "ProtectedOs", "reason": "ProtectedOs", "note": "MSIX store root" },
+
+  { "path": "C:\\WindowsFoo\\x", "tier": "WriteProtected", "reason": "None", "note": "prefix without a separator is a different folder" },
+  { "path": "D:\\Windows", "tier": "WriteProtected", "reason": "None", "note": "only the real %SystemRoot% is Tier 0" },
+  { "path": "C:\\Program Files\\WindowsAppsBackup", "tier": "WriteProtected", "reason": "None", "note": "same prefix trap one level down" },
+
+  { "path": "C:\\Users\\fixture\\AppData\\Local\\Microsoft\\Credentials\\abc", "tier": "SensitiveUserData", "reason": "SensitiveUserData", "note": "credential store" },
+  { "path": "C:\\Users\\fixture\\AppData\\Roaming\\Microsoft\\Protect\\S-1-5-21", "tier": "SensitiveUserData", "reason": "SensitiveUserData", "note": "DPAPI master keys" },
+  { "path": "C:\\Users\\fixture\\.ssh\\id_ed25519", "tier": "SensitiveUserData", "reason": "SensitiveUserData", "note": "private key" },
+  { "path": "C:\\Users\\fixture\\.ssh", "tier": "SensitiveUserData", "reason": "SensitiveUserData", "note": "the directory itself" },
+  { "path": "C:\\Users\\fixture\\Documents\\personal\\vault.kdbx", "tier": "SensitiveUserData", "reason": "SensitiveUserData", "note": "catalog glob, ** across components" },
+  { "path": "C:\\Users\\fixture\\Documents\\vault.kdbx", "tier": "SensitiveUserData", "reason": "SensitiveUserData", "note": "** also matches zero components" },
+  { "path": "C:\\Users\\fixture\\AppData\\Local\\1Password\\data\\x", "tier": "SensitiveUserData", "reason": "SensitiveUserData", "note": "password manager vault" },
+  { "path": "C:\\Users\\fixture\\Documents\\notes.txt", "tier": "WriteProtected", "reason": "None", "note": "an ordinary document is not sensitive" },
+  { "path": "C:\\Users\\fixture\\Documents\\kdbx", "tier": "WriteProtected", "reason": "None", "note": "extension-shaped folder name is not a vault" },
+
+  { "path": "C:\\Users\\fixture\\AppData\\Local\\AppLedgerData\\appledger.db", "tier": "Normal", "reason": "None", "note": "our own data root is the one writable place" },
+  { "path": "D:\\SteamLibrary\\steamapps\\common\\Game", "tier": "WriteProtected", "reason": "None", "note": "a normal app root: readable, scannable, never written" },
+  { "path": "C:\\", "tier": "WriteProtected", "reason": "None", "note": "a volume root itself is not protected" }
+]

@@ -93,6 +93,9 @@ every `host_rules[].rule` must be a known rule kind. A rejected catalog never re
   an `exe`-only entry is rejected.
 - **`host_rules[]`** — `exe`, `exe_glob` and `cmdline_contains` are **OR**-ed with each other and within each list.
   A rule that needs two conditions to hold at once must be expressed as its own rule kind, not as two fields.
+- **One `cat:` namespace** — `apps[].id` and `anticheat[].id` both become `cat:<id>` app ids (an anti-cheat
+  helper outside a game root resolves to `cat:<anticheat id>`, `03_APP_IDENTITY.md` §Host rules), so the two
+  lists share a single id namespace and a collision between them is rejected at parse time.
 
 ### Glob grammar
 

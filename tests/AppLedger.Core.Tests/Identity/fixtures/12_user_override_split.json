@@ -1,0 +1,56 @@
+{
+  "name": "12_user_override_split",
+  "scenario": "A user split forces one renderer out of Chrome; live instances honour it and nothing else moves.",
+  "indexes": {
+    "uninstall": [
+      {
+        "key": "Google Chrome",
+        "displayName": "Google Chrome",
+        "installLocation": "C:\\Program Files\\Google\\Chrome\\Application",
+        "publisher": "Google LLC"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "kind": "split",
+      "match": "--type=utility --utility-sub-type=network",
+      "value": "user:0123456789abcdef0123456789abcdef"
+    }
+  ],
+  "processes": [
+    {
+      "pid": 15100,
+      "createTime": 12000,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\"",
+      "signer": "Google LLC",
+      "expect": "cat:chrome"
+    },
+    {
+      "pid": 15101,
+      "createTime": 12002,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer",
+      "signer": "Google LLC",
+      "parentPid": 15100,
+      "parentCreateTime": 12000,
+      "expect": "cat:chrome"
+    },
+    {
+      "pid": 15102,
+      "createTime": 12004,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=utility --utility-sub-type=network",
+      "signer": "Google LLC",
+      "parentPid": 15100,
+      "parentCreateTime": 12000,
+      "expect": "user:0123456789abcdef0123456789abcdef",
+      "expectConfidence": 1.0,
+      "why": "a user override outranks every other source (docs/03 precedence)"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "06_svchost",
+  "scenario": "A service host names its service when -s is present, and falls back to the group otherwise.",
+  "indexes": {
+    "services": [
+      "Schedule",
+      "Dnscache"
+    ]
+  },
+  "processes": [
+    {
+      "pid": 9100,
+      "createTime": 6000,
+      "imageName": "svchost.exe",
+      "image": "C:\\Windows\\System32\\svchost.exe",
+      "cmdline": "C:\\Windows\\system32\\svchost.exe -k netsvcs -p -s Schedule",
+      "signer": "Microsoft Windows",
+      "expect": "sys:service:Schedule"
+    },
+    {
+      "pid": 9101,
+      "createTime": 6002,
+      "imageName": "svchost.exe",
+      "image": "C:\\Windows\\System32\\svchost.exe",
+      "cmdline": "C:\\Windows\\system32\\svchost.exe -k NetworkService -p -s Dnscache",
+      "signer": "Microsoft Windows",
+      "expect": "sys:service:Dnscache"
+    },
+    {
+      "pid": 9102,
+      "createTime": 6004,
+      "imageName": "svchost.exe",
+      "image": "C:\\Windows\\System32\\svchost.exe",
+      "cmdline": "C:\\Windows\\system32\\svchost.exe -k LocalServiceNetworkRestricted -p",
+      "signer": "Microsoft Windows",
+      "expect": "sys:services",
+      "why": "no -s: we cannot attribute it to one service, so it joins the group bucket"
+    }
+  ]
+}

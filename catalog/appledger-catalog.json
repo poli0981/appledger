@@ -7,10 +7,10 @@
                  "Security", "System", "Utility", "Unknown"],
   "apps": [
     { "id": "steam", "name": "Steam", "publisher": "Valve Corp.", "category": "Launcher",
-      "match": { "signer": ["Valve Corp.", "Valve"], "exe": ["steam.exe"], "install_root_glob": ["%PROGRAMFILES(X86)%\\Steam", "*\\Steam"] },
+      "match": { "signer": ["Valve Corp.", "Valve"], "exe": ["steam.exe"], "install_root_glob": ["%PROGRAMFILES(X86)%\\Steam", "?:\\Steam"] },
       "helpers": { "exe": ["steamwebhelper.exe", "GameOverlayUI.exe", "steamservice.exe", "steamerrorreporter.exe", "steamerrorreporter64.exe"], "cmdline_contains": ["--type="] },
       "data_dirs": ["%LOCALAPPDATA%\\Steam"],
-      "cache_dirs": ["%LOCALAPPDATA%\\Steam\\htmlcache", "*\\Steam\\appcache", "*\\Steam\\steamapps\\shadercache"],
+      "cache_dirs": ["%LOCALAPPDATA%\\Steam\\htmlcache", "?:\\Steam\\appcache", "?:\\Steam\\steamapps\\shadercache"],
       "notes": "Games under steamapps\\common are their own apps (steam:<appid>); never merged into the launcher." },
     { "id": "epic", "name": "Epic Games Launcher", "publisher": "Epic Games, Inc.", "category": "Launcher",
       "match": { "signer": ["Epic Games, Inc."], "exe": ["EpicGamesLauncher.exe"], "install_root_glob": ["%PROGRAMFILES(X86)%\\Epic Games\\Launcher"] },

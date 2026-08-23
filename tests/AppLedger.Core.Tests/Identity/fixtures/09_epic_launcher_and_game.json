@@ -1,0 +1,55 @@
+{
+  "name": "09_epic_launcher_and_game",
+  "scenario": "Epic manifests place a game outside the launcher root; it must still be its own app.",
+  "indexes": {
+    "uninstall": [
+      {
+        "key": "Epic Games Launcher",
+        "displayName": "Epic Games Launcher",
+        "installLocation": "C:\\Program Files (x86)\\Epic Games\\Launcher",
+        "publisher": "Epic Games, Inc."
+      }
+    ],
+    "epic": [
+      {
+        "id": "SomeGame",
+        "installLocation": "D:\\Epic Games\\SomeGame",
+        "name": "Some Game"
+      }
+    ]
+  },
+  "processes": [
+    {
+      "pid": 12100,
+      "createTime": 9000,
+      "imageName": "EpicGamesLauncher.exe",
+      "image": "C:\\Program Files (x86)\\Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe",
+      "cmdline": "\"C:\\Program Files (x86)\\Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe\"",
+      "signer": "Epic Games, Inc.",
+      "expect": "cat:epic"
+    },
+    {
+      "pid": 12101,
+      "createTime": 9002,
+      "imageName": "EpicWebHelper.exe",
+      "image": "C:\\Program Files (x86)\\Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicWebHelper.exe",
+      "cmdline": "EpicWebHelper.exe --type=renderer",
+      "signer": "Epic Games, Inc.",
+      "parentPid": 12100,
+      "parentCreateTime": 9000,
+      "expect": "cat:epic"
+    },
+    {
+      "pid": 12200,
+      "createTime": 9010,
+      "imageName": "SomeGame-Win64-Shipping.exe",
+      "image": "D:\\Epic Games\\SomeGame\\Binaries\\Win64\\SomeGame-Win64-Shipping.exe",
+      "cmdline": "SomeGame-Win64-Shipping.exe",
+      "signer": "Some Studio",
+      "parentPid": 12100,
+      "parentCreateTime": 9000,
+      "expect": "epic:SomeGame",
+      "why": "launcher_children must not adopt a process under a game root"
+    }
+  ]
+}

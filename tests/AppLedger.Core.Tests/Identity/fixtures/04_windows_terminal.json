@@ -1,0 +1,59 @@
+{
+  "name": "04_windows_terminal",
+  "scenario": "An MSIX app owns its OpenConsole helper, but a shell started inside it is a script, not the terminal.",
+  "indexes": {
+    "msix": [
+      "Microsoft.WindowsTerminal_8wekyb3d8bbwe"
+    ]
+  },
+  "processes": [
+    {
+      "pid": 7100,
+      "createTime": 4000,
+      "imageName": "WindowsTerminal.exe",
+      "image": "C:\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_1.21.0_x64__8wekyb3d8bbwe\\WindowsTerminal.exe",
+      "cmdline": "\"C:\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_1.21.0_x64__8wekyb3d8bbwe\\WindowsTerminal.exe\"",
+      "signer": "Microsoft Corporation",
+      "packageFamily": "Microsoft.WindowsTerminal_8wekyb3d8bbwe",
+      "expect": "msix:Microsoft.WindowsTerminal_8wekyb3d8bbwe",
+      "expectConfidence": 1.0,
+      "why": "package identity is a strong signal on its own"
+    },
+    {
+      "pid": 7101,
+      "createTime": 4002,
+      "imageName": "OpenConsole.exe",
+      "image": "C:\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_1.21.0_x64__8wekyb3d8bbwe\\OpenConsole.exe",
+      "cmdline": "OpenConsole.exe --server 0x1a4",
+      "signer": "Microsoft Corporation",
+      "packageFamily": "Microsoft.WindowsTerminal_8wekyb3d8bbwe",
+      "parentPid": 7100,
+      "parentCreateTime": 4000,
+      "expect": "msix:Microsoft.WindowsTerminal_8wekyb3d8bbwe"
+    },
+    {
+      "pid": 7102,
+      "createTime": 4004,
+      "imageName": "pwsh.exe",
+      "image": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "cmdline": "pwsh.exe -File C:\\Work\\build.ps1 -Configuration Release",
+      "signer": "Microsoft Corporation",
+      "parentPid": 7100,
+      "parentCreateTime": 4000,
+      "expect": "script:6a5f1c2f2d3b4e77",
+      "why": "script_from_cmdline: the script is the app, not the shell or the terminal"
+    },
+    {
+      "pid": 7103,
+      "createTime": 4006,
+      "imageName": "conhost.exe",
+      "image": "C:\\Windows\\System32\\conhost.exe",
+      "cmdline": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4",
+      "signer": "Microsoft Windows",
+      "parentPid": 7102,
+      "parentCreateTime": 4004,
+      "expect": "script:6a5f1c2f2d3b4e77",
+      "why": "conhost is attach_parent - it must NOT fall into the system rule first"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "07_portable_7zip",
+  "scenario": "A portable copy has no registry entry and sits outside the catalog root: it must fall through to root:, not steal cat:7zip.",
+  "indexes": {},
+  "processes": [
+    {
+      "pid": 10100,
+      "createTime": 7000,
+      "imageName": "7zFM.exe",
+      "image": "D:\\Tools\\7z\\7zFM.exe",
+      "cmdline": "\"D:\\Tools\\7z\\7zFM.exe\"",
+      "signer": "Igor Pavlov",
+      "productName": "7-Zip",
+      "companyName": "Igor Pavlov",
+      "expect": "root:04b1af0f70cbea01",
+      "expectConfidence": 0.6,
+      "why": "signer matches the catalog but install_root_glob does not, and match is AND across kinds"
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "name": "01_chrome",
+  "scenario": "One browser process, twelve --type= children and a crashpad handler must be a single app.",
+  "indexes": {
+    "uninstall": [
+      {
+        "key": "Google Chrome",
+        "displayName": "Google Chrome",
+        "installLocation": "C:\\Program Files\\Google\\Chrome\\Application",
+        "publisher": "Google LLC"
+      }
+    ]
+  },
+  "processes": [
+    {
+      "pid": 4100,
+      "createTime": 1000,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\"",
+      "signer": "Google LLC",
+      "expect": "cat:chrome",
+      "why": "browser process: signer + exe + install root all match the catalog rule"
+    },
+    {
+      "pid": 4110,
+      "createTime": 1002,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1000",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4111,
+      "createTime": 1003,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1001",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4112,
+      "createTime": 1004,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1002",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4113,
+      "createTime": 1005,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1003",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4114,
+      "createTime": 1006,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1004",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4115,
+      "createTime": 1007,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1005",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4116,
+      "createTime": 1008,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1006",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4117,
+      "createTime": 1009,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1007",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4118,
+      "createTime": 1010,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1008",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4119,
+      "createTime": 1011,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1009",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4120,
+      "createTime": 1012,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1010",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4121,
+      "createTime": 1013,
+      "imageName": "chrome.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "cmdline": "chrome.exe --type=renderer --field-trial-handle=1011",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "--type= marks a Chromium child; attach_parent adopts it"
+    },
+    {
+      "pid": 4199,
+      "createTime": 1020,
+      "imageName": "chrome_crashpad_handler.exe",
+      "image": "C:\\Program Files\\Google\\Chrome\\Application\\chrome_crashpad_handler.exe",
+      "cmdline": "chrome_crashpad_handler.exe --database=...",
+      "signer": "Google LLC",
+      "parentPid": 4100,
+      "parentCreateTime": 1000,
+      "expect": "cat:chrome",
+      "why": "crashpad handler matches the attach_parent exe_glob"
+    }
+  ]
+}
