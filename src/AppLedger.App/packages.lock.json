@@ -19,9 +19,9 @@
       },
       "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
         "type": "Direct",
-        "requested": "[4.14.0, )",
-        "resolved": "4.14.0",
-        "contentHash": "gSWJlDWwmDhtbrEJGiHqvEjz9KthIiFD0qYB8zZ6a7z+xpMSPEtM9yTYELSa58iFWYlzSRqP9FXO6KoT3+ZMtg=="
+        "requested": "[5.6.0, )",
+        "resolved": "5.6.0",
+        "contentHash": "Kcobt3pnOdO0A+6CKiMHZdTEluJpsfxiV20axtZdmfBQnDmiWTKPJADlgAfdTuKNAnVarrkJa0UEGwuOo91muw=="
       },
       "Microsoft.Extensions.Hosting": {
         "type": "Direct",
@@ -592,7 +592,6 @@
         "type": "Project",
         "dependencies": {
           "AppLedger.Core": "[0.1.0, )",
-          "AppLedger.Ipc": "[0.1.0, )",
           "Dapper": "[2.1.66, )",
           "MaxMind.Db": "[4.2.0, )",
           "Microsoft.Data.Sqlite": "[10.0.9, )",
