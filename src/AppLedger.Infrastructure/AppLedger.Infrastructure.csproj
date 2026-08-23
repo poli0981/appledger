@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Windows adapters: ETW (TraceEvent), ProcessPoller (ntdll), IP Helper, PDH GPU, PE/Authenticode, registry,
+       launcher manifests, DiskScanner + USN, SQLite repositories, catalog loader + minisign verify, PolicyGuard impl. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <RootNamespace>AppLedger.Infrastructure</RootNamespace>
+    <Platforms>x64;ARM64</Platforms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AppLedger.Core\AppLedger.Core.csproj" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
+    <PackageReference Include="Microsoft.Windows.CsWin32" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="MaxMind.Db" />
+    <PackageReference Include="NSec.Cryptography" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <AdditionalFiles Include="NativeMethods.txt" />
+    <AdditionalFiles Include="NativeMethods.json" />
+  </ItemGroup>
+</Project>

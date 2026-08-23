@@ -1,0 +1,27 @@
+<ui:FluentWindow x:Class="AppLedger.App.Views.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="AppLedger"
+                 Width="1280"
+                 Height="800"
+                 MinWidth="960"
+                 MinHeight="600"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterScreen">
+    <!--  TODO(kickoff): v0.2 replaces the placeholder body with ui:NavigationView + pages (docs/08_UI.md).  -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="AppLedger" />
+        <ui:TextBlock Grid.Row="1"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      FontTypography="Subtitle"
+                      Text="AppLedger shell arrives in v0.2." />
+    </Grid>
+</ui:FluentWindow>

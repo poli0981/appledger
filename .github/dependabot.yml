@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # WPF-UI is pinned by hand after reading release notes (deprecated 4.x releases exist).
+      - dependency-name: "WPF-UI*"
+    groups:
+      microsoft:
+        patterns: ["Microsoft.*", "System.*"]
+      serilog:
+        patterns: ["Serilog*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

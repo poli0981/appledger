@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Community Discord
+    url: "https://discord.gg/uSPyBWHuV"
+    about: Questions and discussion — faster than issues for support.
+  - name: Project links (site, socials)
+    url: "https://poli0981.dev/links"
+    about: Where else to find AppLedger and its author.
+  - name: Catalog entry (app identity / category)
+    url: "https://github.com/poli0981/appledger/blob/main/docs/13_CATALOG_RULES.md"
+    about: Wrong app grouping or category? Propose a catalog rule instead of a bug.

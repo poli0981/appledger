@@ -1,0 +1,82 @@
+// CsWin32 generation list (docs/17_BUILD.md §CsWin32). Exact names only, no wildcards. Every entry is a query/read API.
+// NtQuerySystemInformation / NtQueryInformationProcess are hand-written in Infrastructure/Ntdll/ (explicit struct layouts).
+// --- process (zero-touch policy: never VM_READ/VM_OPERATION/TERMINATE; see docs/11_SAFETY_POLICY.md) ---
+OpenProcess
+PROCESS_ACCESS_RIGHTS
+QueryFullProcessImageName
+OpenProcessToken
+GetTokenInformation
+LookupAccountSid
+IsWow64Process2
+GetPackageFullName
+PackageFamilyNameFromFullName
+GetProcessTimes
+// --- windows / picker ---
+WindowFromPoint
+GetAncestor
+GetWindowThreadProcessId
+EnumChildWindows
+GetClassName
+IsHungAppWindow
+// --- paths / policy ---
+GetFinalPathNameByHandle
+GetLongPathName
+QueryDosDevice
+SHGetKnownFolderPath
+SHGetFileInfo
+FOLDERID_Windows
+FOLDERID_System
+FOLDERID_SystemX86
+FOLDERID_ProgramFiles
+FOLDERID_ProgramFilesX86
+FOLDERID_ProgramData
+FOLDERID_LocalAppData
+FOLDERID_RoamingAppData
+FOLDERID_LocalAppDataLow
+FOLDERID_Documents
+FOLDERID_SavedGames
+FOLDERID_UserProgramFiles
+// --- disk ---
+FindFirstFileEx
+FindNextFile
+FindClose
+GetCompressedFileSize
+GetDiskFreeSpace
+GetDiskFreeSpaceEx
+GetFileInformationByHandleEx
+OpenFileById
+DeviceIoControl
+FSCTL_QUERY_USN_JOURNAL
+FSCTL_READ_USN_JOURNAL
+USN_JOURNAL_DATA_V1
+READ_USN_JOURNAL_DATA_V1
+USN_RECORD_V2
+USN_RECORD_V3
+// --- network ---
+GetExtendedTcpTable
+GetExtendedUdpTable
+SetPerTcpConnectionEStats
+GetPerTcpConnectionEStats
+SetPerTcp6ConnectionEStats
+GetPerTcp6ConnectionEStats
+GetUnicastIpAddressTable
+NotifyUnicastIpAddressChange
+GetIfTable2
+FreeMibTable
+GetBestInterfaceEx
+GetInterfaceDnsSettings
+DnsQueryEx
+DnsFree
+// --- PDH (GPU engine / process memory counters) ---
+PdhOpenQuery
+PdhAddEnglishCounter
+PdhCollectQueryData
+PdhGetFormattedCounterArray
+PdhCloseQuery
+// --- signature ---
+WinVerifyTrust
+CryptQueryObject
+WINTRUST_ACTION_GENERIC_VERIFY_V2
+// --- pipes (peer verification) ---
+GetNamedPipeClientProcessId
+GetNamedPipeServerProcessId

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Domain + Application: app identity model, metric math, policy model, rollups, ports. No Windows API, no I/O. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>x64;ARM64</Platforms>
+    <RootNamespace>AppLedger.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

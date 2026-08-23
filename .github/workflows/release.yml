@@ -1,0 +1,23 @@
+# Caller stub -> reusable release pipeline (build, Velopack pack, GitHub Release).
+# Both AppLedger.exe and AppLedger.Agent.exe ship in ONE Velopack package (docs/16_PACKAGING_AND_UPDATES.md).
+# TODO(kickoff): add code-signing inputs here if/when Azure Trusted Signing is adopted.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # create the GitHub Release + upload Velopack assets
+
+jobs:
+  release:
+    uses: poli0981/.github/.github/workflows/reusable-dotnet-release.yml@main
+    with:
+      solution: AppLedger.slnx
+      dotnet-version: "10.0.x"
+      velopack: true
+      runtime: win-x64
+      pack-id: AppLedger
+      main-exe: AppLedger.exe
+    secrets: inherit

@@ -1,0 +1,5 @@
+# AppLedger TEST-ONLY Ed25519 seed. Never used for releases - the release key lives only in the
+# GitHub secret CATALOG_MINISIGN_KEY (docs/18_CI_CD.md). Committed so the fixtures below can be
+# regenerated without installing the minisign CLI.
+# key id: 05E0E1316342AA8C
+QCVR8FFFfieZRJtsHQwj4/rfF3IZX7ogRzlXymwktOc=

@@ -1,0 +1,31 @@
+<Project>
+  <PropertyGroup>
+    <!-- No AnyCPU: docs/23_NON_GOALS.md NG-11 rules out x86, and CsWin32 refuses to generate
+         architecture-specific APIs (SHGetFileInfo, DnsQueryEx) without a concrete platform.
+         ARM64 builds pass -p:Platform=ARM64. docs/17_BUILD.md. -->
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- packages.lock.json is committed so CI can restore in locked mode. docs/18_CI_CD.md.
+         After changing a pin, re-run restore with the force-evaluate switch. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <SatelliteResourceLanguages>en;vi;ja</SatelliteResourceLanguages>
+    <Authors>poli0981</Authors>
+    <Product>AppLedger</Product>
+    <Copyright>Copyright © poli0981</Copyright>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/poli0981/appledger</RepositoryUrl>
+    <Version>0.1.0</Version>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Bans System.Windows.MessageBox, PROCESS_VM_READ constants, etc. See docs/11_SAFETY_POLICY.md §7 -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,48 @@
+; docs/11_SAFETY_POLICY.md is the contract; this file is its build-time half.
+; Format: <symbol-id>;<message>. Unresolvable ids are ignored, so the PROCESS_* entries below
+; only bind in AppLedger.Infrastructure where CsWin32 generates the enum - that is also the only
+; project allowed to call OpenProcess (CLAUDE.md: no DllImport outside Infrastructure).
+
+; --- UI ---
+T:System.Windows.MessageBox;Use Wpf.Ui.Controls.MessageBox (docs/22_WPFUI_SYNTAX.md)
+
+; --- read-only product (docs/23_NON_GOALS.md NG-1, NG-2) ---
+M:System.Diagnostics.Process.Kill;AppLedger is read-only (docs/23_NON_GOALS.md)
+M:System.Diagnostics.Process.Kill(System.Boolean);AppLedger is read-only (docs/23_NON_GOALS.md)
+
+; File/directory deletion: the Agent deletes only inside DataRoot (purge, icon cache, scan cache,
+; migration backups - docs/12_PRIVACY_AND_RETENTION.md §Purge). When that code lands it goes in a
+; single Infrastructure/Storage/DataRootFiles.cs that suppresses RS0030 with a comment naming this
+; file. Suppressing RS0030 anywhere else is a review-blocking bug.
+M:System.IO.File.Delete(System.String);Agent never deletes user files; go through DataRootFiles (docs/11_SAFETY_POLICY.md §6)
+M:System.IO.Directory.Delete(System.String);Agent never deletes user files; go through DataRootFiles (docs/11_SAFETY_POLICY.md §6)
+M:System.IO.Directory.Delete(System.String,System.Boolean);Agent never deletes user files; go through DataRootFiles (docs/11_SAFETY_POLICY.md §6)
+
+; --- process enumeration must go through the poller (docs/05_COLLECTOR.md) ---
+M:System.Diagnostics.Process.GetProcesses;Use the ProcessPoller (NtQuerySystemInformation), docs/05_COLLECTOR.md
+M:System.Diagnostics.Process.GetProcessesByName(System.String);Use the ProcessPoller, docs/05_COLLECTOR.md
+
+; --- observer principle: PROCESS_QUERY_LIMITED_INFORMATION is the only right we ever request ---
+; docs/11_SAFETY_POLICY.md §Principle. Every other member of the CsWin32 PROCESS_ACCESS_RIGHTS enum
+; is banned, so adding one is a deliberate, visible edit to this file rather than a quiet change.
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_VM_READ;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_VM_WRITE;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_VM_OPERATION;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_CREATE_THREAD;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_CREATE_PROCESS;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_DUP_HANDLE;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_SET_INFORMATION;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_SET_LIMITED_INFORMATION;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_SET_QUOTA;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_SET_SESSIONID;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_TERMINATE;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_SUSPEND_RESUME;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_QUERY_INFORMATION;Use PROCESS_QUERY_LIMITED_INFORMATION, never the full one (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_ALL_ACCESS;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_SYNCHRONIZE;We never wait on foreign processes (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_DELETE;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_WRITE_DAC;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+F:Windows.Win32.System.Threading.PROCESS_ACCESS_RIGHTS.PROCESS_WRITE_OWNER;Only PROCESS_QUERY_LIMITED_INFORMATION is allowed (docs/11_SAFETY_POLICY.md)
+
+; --- handle/object enumeration is forbidden outright (docs/23_NON_GOALS.md NG-14) ---
+M:System.Diagnostics.Process.get_Handle;Never hold a handle to a foreign process (docs/11_SAFETY_POLICY.md)

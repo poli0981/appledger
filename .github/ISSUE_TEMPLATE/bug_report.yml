@@ -1,0 +1,45 @@
+name: Bug report
+description: Something is wrong or a number looks off
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: AppLedger version
+      placeholder: "1.0.3 (Settings > About)"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows build
+      placeholder: "Windows 11 24H2 (26100.xxxx), x64"
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Agent mode
+      options: [Agent installed (full), Lite mode (no Agent), Unsure]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened / what did you expect
+      description: For wrong numbers, name the app and which tab (Disk, Network, ...) and what Task Manager / Resource Monitor shows instead.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log excerpt
+      description: "Settings > Diagnostics > Open logs. Paste the relevant lines from agent-*.log / ui-*.log. Hostnames and paths are redacted at the default log level."
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed anything private (hostnames, user names, paths) from the log excerpt.
+          required: true

@@ -1,0 +1,18 @@
+# Caller stub -> reusable cross-post notifier (Telegram/Bluesky/Discord/Mastodon/X/Facebook).
+name: Notify release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  notify:
+    uses: poli0981/.github/.github/workflows/reusable-notify.yml@main
+    with:
+      title: "AppLedger ${{ github.event.release.tag_name }} released"
+      url: ${{ github.event.release.html_url }}
+    secrets: inherit

@@ -1,0 +1,25 @@
+# .editorconfig sets end_of_line = lf for every file, and CI runs
+# `dotnet format --verify-no-changes`. Without this file Git would check out CRLF
+# on Windows and the format check could never pass. docs/17_BUILD.md §Analyzers & style.
+* text=auto eol=lf
+
+# Scripts Windows executes directly must keep CRLF.
+*.ps1  text eol=crlf
+*.psm1 text eol=crlf
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+
+# Never touched by EOL normalization.
+*.etl   binary
+*.etlx  binary
+*.ico   binary
+*.png   binary
+*.jpg   binary
+*.mmdb  binary
+*.nupkg binary
+*.bin   binary
+*.db    binary
+
+# Generated / vendored: keep out of diffs and language stats.
+packages.lock.json          linguist-generated=true
+catalog/public_suffix_list.dat -diff linguist-vendored=true

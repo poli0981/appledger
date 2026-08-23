@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "version": "2026.08.0",
+  "generated_utc": "2026-08-23T00:00:00Z",
+  "min_app_version": "0.1.0",
+  "categories": ["Game", "Browser", "Communication", "DevTool", "Media", "Productivity", "Launcher", "Runtime",
+                 "Security", "System", "Utility", "Unknown"],
+  "apps": [],
+  "host_rules": [],
+  "launchers": [],
+  "anticheat": [],
+  "protected_paths": [],
+  "sensitive_paths": [],
+  "protected_processes": [],
+  "tunnel_adapter_names": [],
+  "system_display_names": {}
+}

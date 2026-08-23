@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The collection pipeline as a hostable library (sensors -> accumulators -> rollups -> repos).
+       Hosted by the Agent (Privilege=Elevated) or by the App in Lite mode (Privilege=Standard). docs/05_COLLECTOR.md -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <RootNamespace>AppLedger.Collector</RootNamespace>
+    <Platforms>x64;ARM64</Platforms>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AppLedger.Core\AppLedger.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

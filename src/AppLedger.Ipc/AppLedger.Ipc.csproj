@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pipe protocol contracts (DTOs, envelope, length-prefixed framing, client/server primitives). docs/07_IPC.md -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>x64;ARM64</Platforms>
+    <RootNamespace>AppLedger.Ipc</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AppLedger.Core\AppLedger.Core.csproj" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

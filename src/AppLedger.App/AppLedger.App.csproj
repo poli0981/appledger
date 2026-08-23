@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- AppLedger.exe — WPF UI (standard user). WPF-UI 4.3.0 shell + ScottPlot 5. docs/08_UI.md, docs/22_WPFUI_SYNTAX.md -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>AppLedger.App</RootNamespace>
+    <AssemblyName>AppLedger</AssemblyName>
+    <Platforms>x64;ARM64</Platforms>
+    <!-- TODO(kickoff): restore ApplicationIcon (Assets\icon.ico) when the shell lands in v0.2 -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AppLedger.Core\AppLedger.Core.csproj" />
+    <ProjectReference Include="..\AppLedger.Ipc\AppLedger.Ipc.csproj" />
+    <ProjectReference Include="..\AppLedger.Collector\AppLedger.Collector.csproj" />   <!-- Lite mode hosts the collector in-proc -->
+    <ProjectReference Include="..\AppLedger.Infrastructure\AppLedger.Infrastructure.csproj" />
+    <PackageReference Include="WPF-UI" />
+    <PackageReference Include="WPF-UI.DependencyInjection" />
+    <PackageReference Include="ScottPlot.WPF" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="H.NotifyIcon.Wpf" />
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Extensions.Hosting" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Velopack" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Strings.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

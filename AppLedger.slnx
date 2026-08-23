@@ -1,0 +1,80 @@
+<Solution>
+  <!-- No project ever builds AnyCPU: docs/23_NON_GOALS.md NG-11 rules out x86, and an AnyCPU target
+       makes CsWin32 refuse architecture-specific APIs (SHGetFileInfo, DnsQueryEx). Two things are
+       load-bearing here and both were found the hard way (docs/24_ADR.md ADR-16 + Findings):
+         1. the per-project Platform mappings - without them the solution pins every project to
+            AnyCPU no matter what the project's own <Platforms> says;
+         2. the "Any CPU" solution platform - MSBuild picks the default solution platform as
+            "Any CPU" if present, otherwise the alphabetically first one, which would be ARM64.
+            It exists only as the default alias and maps every project to x64. -->
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="ARM64" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/AppLedger.Core/AppLedger.Core.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AppLedger.Ipc/AppLedger.Ipc.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AppLedger.Infrastructure/AppLedger.Infrastructure.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AppLedger.Collector/AppLedger.Collector.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AppLedger.Agent/AppLedger.Agent.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="src/AppLedger.App/AppLedger.App.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AppLedger.Core.Tests/AppLedger.Core.Tests.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/AppLedger.Infrastructure.Tests/AppLedger.Infrastructure.Tests.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/AppLedger.Collector.Tests/AppLedger.Collector.Tests.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/AppLedger.App.Tests/AppLedger.App.Tests.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+  </Folder>
+  <Folder Name="/solution-items/">
+    <File Path="CLAUDE.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="BannedSymbols.txt" />
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path="catalog/appledger-catalog.json" />
+  </Folder>
+</Solution>

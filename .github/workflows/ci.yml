@@ -1,0 +1,25 @@
+# Caller stub -> reusable workflow in poli0981/.github (ops repo).
+# TODO(kickoff): confirm the reusable workflow filename + inputs against the ops repo, then delete this comment.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Callers without an explicit permissions block default everything to `none`
+# when calling reusable workflows — always declare (ops-repo permissions matrix).
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    uses: poli0981/.github/.github/workflows/reusable-dotnet-desktop.yml@main
+    with:
+      solution: AppLedger.slnx
+      dotnet-version: "10.0.x"
+      run-format-check: true
+      run-analyzers: true
+      run-vulnerability-gate: true   # dotnet list package --vulnerable --include-transitive
+      test-filter: "Category!=Admin&Category!=Manual"   # admin-only ETW/USN tests never run on hosted runners
+    secrets: inherit
