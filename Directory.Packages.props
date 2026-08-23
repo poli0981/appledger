@@ -44,7 +44,7 @@
     <!-- Packaging -->
     <PackageVersion Include="Velopack" Version="1.2.0" />                                   <!-- [checked 2026-08-22] -->
     <!-- Analyzers -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="4.14.0" />  <!-- [checked 2026-08-23] 3.11.0 is prerelease-only -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />  <!-- [checked 2026-08-23] 3.11.0 is prerelease-only -->
     <!-- Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
