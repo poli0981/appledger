@@ -1,4 +1,8 @@
-# Caller stub -> reusable cross-post notifier (Telegram/Bluesky/Discord/Mastodon/X/Facebook).
+# Announce a published release to the project's Discord.
+#
+# Self-contained and opt-in: with no DISCORD_WEBHOOK secret configured the job simply skips, so a fork or a
+# fresh clone never fails here. Nothing about a user's machine is involved — this posts the release title
+# and URL, both already public (docs/12_PRIVACY_AND_RETENTION.md covers what the *app* sends, not CI).
 name: Notify release
 
 on:
@@ -7,12 +11,23 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
-  notify:
-    uses: poli0981/.github/.github/workflows/reusable-notify.yml@main
-    with:
-      title: "AppLedger ${{ github.event.release.tag_name }} released"
-      url: ${{ github.event.release.html_url }}
-    secrets: inherit
+  discord:
+    name: Post to Discord
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Post
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          TITLE: AppLedger ${{ github.event.release.tag_name }} released
+          URL: ${{ github.event.release.html_url }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK is not configured; nothing to announce."
+            exit 0
+          fi
+          # jq ships on the runner; it quotes the payload correctly whatever the release title contains.
+          jq -n --arg content "$TITLE"$'\n'"$URL" '{content: $content}' \
+            | curl -sS -H 'Content-Type: application/json' -d @- "$WEBHOOK"

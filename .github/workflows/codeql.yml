@@ -1,5 +1,8 @@
-# Caller stub -> reusable CodeQL workflow in poli0981/.github.
-# Disable "Default setup" in repo Settings > Code security before the first run, or SARIF upload is rejected.
+# Self-contained CodeQL analysis.
+#
+# Runs on windows-latest, not ubuntu: four of the six projects target net10.0-windows and cannot be built
+# on Linux, and C# analysis without a build sees far less. Disable "Default setup" in
+# Settings > Code security before the first run, or the SARIF upload is rejected as a duplicate.
 name: CodeQL
 
 on:
@@ -15,9 +18,38 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
 jobs:
   analyze:
-    uses: poli0981/.github/.github/workflows/reusable-codeql.yml@main
-    with:
-      languages: csharp
-    secrets: inherit
+    name: Analyze C#
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+
+      # Restore separately so the traced build is only compilation, and force a full build: CodeQL sees
+      # nothing in a project that MSBuild decides is already up to date.
+      - name: Restore
+        run: dotnet restore AppLedger.slnx --locked-mode
+
+      - name: Build
+        run: dotnet build AppLedger.slnx -c Release --no-restore --no-incremental
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:csharp"

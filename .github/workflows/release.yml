@@ -1,6 +1,10 @@
-# Caller stub -> reusable release pipeline (build, Velopack pack, GitHub Release).
-# Both AppLedger.exe and AppLedger.Agent.exe ship in ONE Velopack package (docs/16_PACKAGING_AND_UPDATES.md).
-# TODO(kickoff): add code-signing inputs here if/when Azure Trusted Signing is adopted.
+# Self-contained release pipeline. docs/16_PACKAGING_AND_UPDATES.md is the spec.
+#
+# One Velopack package holds both executables: AppLedger.exe (UI, standard user) and AppLedger.Agent.exe
+# (elevated worker). They publish into the same folder before packing.
+#
+# NEVER RUN YET. Do a dry run on a pre-release tag before trusting it for v1.0, and note the two gaps
+# recorded in docs/18_CI_CD.md: the ARM64 channel and catalog signing.
 name: Release
 
 on:
@@ -8,16 +12,100 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write   # create the GitHub Release + upload Velopack assets
+  contents: write # create the GitHub Release and upload assets
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  RID: win-x64
 
 jobs:
   release:
-    uses: poli0981/.github/.github/workflows/reusable-dotnet-release.yml@main
-    with:
-      solution: AppLedger.slnx
-      dotnet-version: "10.0.x"
-      velopack: true
-      runtime: win-x64
-      pack-id: AppLedger
-      main-exe: AppLedger.exe
-    secrets: inherit
+    name: Publish and pack
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Derive version from the tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}' -replace '^v', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+') {
+            Write-Error "Tag '${{ github.ref_name }}' is not vMAJOR.MINOR.PATCH."
+            exit 1
+          }
+          Write-Host "version=$version"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Restore (locked mode)
+        run: dotnet restore AppLedger.slnx --locked-mode
+
+      - name: Test
+        run: >
+          dotnet test AppLedger.slnx -c Release
+          --filter "Category!=Admin&Category!=Manual"
+
+      # Both executables land in the same folder: Velopack packs one directory.
+      - name: Publish UI and Agent
+        run: |
+          dotnet publish src/AppLedger.App -c Release -r ${{ env.RID }} --self-contained false -o publish/${{ env.RID }}
+          dotnet publish src/AppLedger.Agent -c Release -r ${{ env.RID }} --self-contained false -o publish/${{ env.RID }}
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk --version 1.2.*
+
+      # TODO(v0.2): add --icon src/AppLedger.App/Assets/icon.ico once the shell ships one.
+      - name: Pack
+        run: >
+          vpk pack
+          --packId AppLedger
+          --packVersion ${{ steps.version.outputs.version }}
+          --packDir publish/${{ env.RID }}
+          --mainExe AppLedger.exe
+          --releaseNotes RELEASE_NOTES.md
+          --framework net10.0-x64-desktop
+          --outputDir releases
+
+      # README tells users to verify these before clicking through SmartScreen, so they must be published.
+      - name: Compute asset checksums
+        shell: pwsh
+        run: |
+          $lines = @('', '## SHA-256', '', '```')
+          Get-ChildItem releases -File | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            $lines += ('{0}  {1}' -f $hash, $_.Name)
+          }
+          $lines += '```'
+          $body = (Get-Content RELEASE_NOTES.md -Raw) + ($lines -join "`n") + "`n"
+          Set-Content -Path release-body.md -Value $body -Encoding utf8
+          Write-Host $body
+
+      # TODO(v1.0): sign catalog/appledger-catalog.json with CATALOG_MINISIGN_KEY and attach the .minisig
+      # plus public_suffix_list.dat. The Agent verifies even the bundled catalog (docs/13), so a release
+      # without this ships rules the Agent will reject. Tracked in docs/18_CI_CD.md.
+
+      - name: Create the GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create '${{ github.ref_name }}' (Get-ChildItem releases -File | ForEach-Object { $_.FullName }) `
+            --title 'AppLedger ${{ steps.version.outputs.version }}' `
+            --notes-file release-body.md `
+            --verify-tag
+
+      - name: Upload packed output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: velopack-${{ env.RID }}
+          path: releases/
+          if-no-files-found: warn

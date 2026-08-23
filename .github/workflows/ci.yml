@@ -1,5 +1,9 @@
-# Caller stub -> reusable workflow in poli0981/.github (ops repo).
-# TODO(kickoff): confirm the reusable workflow filename + inputs against the ops repo, then delete this comment.
+# Self-contained CI for this repository.
+#
+# Earlier drafts called reusable workflows in poli0981/.github. Three of the four did not exist under the
+# names used, the one that did takes a different input set, and its C# CodeQL job runs on ubuntu, which
+# cannot build the net10.0-windows projects. Owning the pipeline here keeps the gates in docs/18_CI_CD.md
+# enforceable instead of aspirational. Action versions match the ones the ops repo has verified.
 name: CI
 
 on:
@@ -7,19 +11,107 @@ on:
     branches: [main]
   pull_request:
 
-# Callers without an explicit permissions block default everything to `none`
-# when calling reusable workflows — always declare (ops-repo permissions matrix).
 permissions:
   contents: read
 
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
 jobs:
   build-test:
-    uses: poli0981/.github/.github/workflows/reusable-dotnet-desktop.yml@main
-    with:
-      solution: AppLedger.slnx
-      dotnet-version: "10.0.x"
-      run-format-check: true
-      run-analyzers: true
-      run-vulnerability-gate: true   # dotnet list package --vulnerable --include-transitive
-      test-filter: "Category!=Admin&Category!=Manual"   # admin-only ETW/USN tests never run on hosted runners
-    secrets: inherit
+    name: Build and test (x64)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      # packages.lock.json is committed, so a drifted pin fails here rather than resolving silently.
+      - name: Restore (locked mode)
+        run: dotnet restore AppLedger.slnx --locked-mode
+
+      - name: Format check
+        run: dotnet format AppLedger.slnx --verify-no-changes
+
+      # Warnings are errors through Directory.Build.props; no extra flag needed.
+      - name: Build
+        run: dotnet build AppLedger.slnx -c Release --no-restore
+
+      # Admin tests need real ETW sessions on an elevated box; Manual tests are the release checklist.
+      - name: Test
+        run: >
+          dotnet test AppLedger.slnx -c Release --no-build
+          --filter "Category!=Admin&Category!=Manual"
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
+
+      - name: Coverage gate (AppLedger.Core at least 80 percent)
+        shell: pwsh
+        run: |
+          $reports = Get-ChildItem -Recurse -Filter coverage.cobertura.xml -ErrorAction SilentlyContinue
+          if (-not $reports) { Write-Error 'No coverage report was produced.'; exit 1 }
+          $rate = $null
+          foreach ($report in $reports) {
+            [xml]$xml = Get-Content $report.FullName
+            foreach ($pkg in $xml.coverage.packages.package) {
+              if ($pkg.name -eq 'AppLedger.Core') {
+                $value = [double]$pkg.'line-rate' * 100
+                if ($null -eq $rate -or $value -gt $rate) { $rate = $value }
+              }
+            }
+          }
+          if ($null -eq $rate) { Write-Error 'AppLedger.Core is absent from the coverage report.'; exit 1 }
+          Write-Host ('AppLedger.Core line coverage: {0:N1} percent' -f $rate)
+          if ($rate -lt 80) {
+            Write-Error ('Coverage {0:N1} percent is below the 80 percent gate (docs/18_CI_CD.md).' -f $rate)
+            exit 1
+          }
+
+      # `dotnet list package --vulnerable` exits 0 even when it finds something; vulnerable rows start with '>'.
+      - name: Vulnerability gate
+        shell: pwsh
+        run: |
+          $out = dotnet list AppLedger.slnx package --vulnerable --include-transitive | Out-String
+          Write-Host $out
+          if ($out -match '(?m)^\s*>\s') {
+            Write-Error 'Vulnerable packages found (docs/18_CI_CD.md).'
+            exit 1
+          }
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: |
+            **/TestResults/*.trx
+            **/TestResults/**/coverage.cobertura.xml
+          if-no-files-found: ignore
+
+  # ARM64 is a supported target (NFR-6) and its own Velopack channel, so it must not rot between releases.
+  # Build only: an x64 runner cannot execute ARM64 test binaries.
+  build-arm64:
+    name: Build (ARM64)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore (locked mode)
+        run: dotnet restore AppLedger.slnx --locked-mode
+
+      - name: Build
+        run: dotnet build AppLedger.slnx -c Release -p:Platform=ARM64 --no-restore
