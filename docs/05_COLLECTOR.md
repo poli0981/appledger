@@ -36,7 +36,7 @@ Two real-time sessions with fixed names so a crashed Agent can reclaim them (`Tr
 
 ```csharp
 // Session 1 — kernel providers (system logger). Name must not be "NT Kernel Logger" so we coexist with other tools.
-var kernel = new TraceEventSession("AppLedger-Kernel") { StopOnDispose = true, BufferSizeMB = 64, BufferQuantumSize = 1024 };
+var kernel = new TraceEventSession("AppLedger-Kernel") { StopOnDispose = true, BufferSizeMB = 64, BufferQuantumKB = 1024 };
 kernel.EnableKernelProvider(
     KernelTraceEventParser.Keywords.Process
   | KernelTraceEventParser.Keywords.Thread          // needed so DiskIO's IssuingThreadId resolves to a PID

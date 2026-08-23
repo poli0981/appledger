@@ -144,7 +144,7 @@ Runs **before** the Collector exists, so the premise behind ADR-3 is tested at k
 
 | Spike | Date | Box | Result | Numbers / link |
 |---|---|---|---|---|
-| S1-lite | — | — | not run | |
+| S1-lite | 2026-08-23 | — | harness ready, **not run** | needs an elevated terminal: `dotnet run -c Release --project spikes/S1.EtwBudget -- --minutes 45 --out s1-lite.csv` |
 | S1 | — | — | not run | |
 | S2 | — | — | not run | |
 | S3 | — | — | not run | |
