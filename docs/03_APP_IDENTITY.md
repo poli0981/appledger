@@ -61,6 +61,13 @@ Every step returns `(app_id?, confidence, evidence[])`. The first step that yiel
 step has strictly higher precedence (table above). Evidence is stored in `process_instances.identity_evidence` (JSON,
 debug level) so "why is this grouped here?" is answerable in the UI.
 
+**What v0.2 actually ships.** `FallbackIdentityResolver` implements steps **1 and 10 only** — Tier-0 paths to the
+`sys:*` family, everything else to `root:<hash of install root>` — because the resolver above is gated by spike S2 and
+lands at v0.3 with its fixture suite rather than ahead of it. The visible consequence is that the root fallback groups
+by whatever directory sits below the boundary, which for a vendor layout is the *vendor* folder: every product under
+`%ProgramFiles%\Google` shares one `root:` id until a catalog rule claims it. Confidences are honest about this — they
+are 0.30, below the prompt threshold, so the UI's "?" badge already offers "Assign to app…".
+
 ## Host rules (shipped in the catalog, `host_rules[]`)
 
 | Rule | Matches | Result |
