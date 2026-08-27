@@ -98,16 +98,33 @@ public sealed class PolicyGuardTests : IDisposable
     }
 
     /// <summary>
-    /// 8.3 short names are a second spelling of the same directory. Whether a volume still generates them
-    /// is a machine setting, so a machine without them skips instead of failing.
+    /// 8.3 short names are a second spelling of the same directory, and a path may mix the two. Whether a
+    /// volume still generates short names is a machine setting, so a machine without them skips.
     /// </summary>
+    /// <remarks>
+    /// The short form is only ever taken for the Windows directory itself, never guessed for a child:
+    /// which sibling owns <c>SYSTEM~1</c> depends on creation order, so asserting it would be asserting a
+    /// property of the machine rather than of the policy.
+    /// </remarks>
     [ShortNameFact]
-    public void Evaluate_ShortNameComponents_AreExpandedBeforeTiering()
+    public void Evaluate_ShortWindowsRoot_IsExpandedBeforeTiering()
     {
-        var shortWindows = Capabilities.ShortWindowsRoot!;
+        var decision = _guard.Evaluate(Capabilities.ShortWindowsRoot!);
 
-        var decision = _guard.Evaluate(Path.Combine(shortWindows, "SYSTEM~1"));
+        decision.Unresolved.ShouldBeFalse();
+        decision.Tier.ShouldBe(PathTier.ProtectedOs);
+        decision.Canonical.ShouldBe(_folders.Windows, StringCompareShould.IgnoreCase);
+    }
 
+    /// <summary>A short component in the middle of an otherwise long path is expanded too.</summary>
+    [ShortNameFact]
+    public void Evaluate_ShortComponentInsideALongPath_IsExpandedBeforeTiering()
+    {
+        var mixed = Path.Combine(Capabilities.ShortWindowsRoot!, "System32");
+
+        var decision = _guard.Evaluate(mixed);
+
+        decision.Unresolved.ShouldBeFalse();
         decision.Tier.ShouldBe(PathTier.ProtectedOs);
         decision.Canonical.ShouldBe(System32, StringCompareShould.IgnoreCase);
     }
