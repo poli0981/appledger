@@ -6,6 +6,11 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Shared fixture locator, linked rather than packaged. docs/19_TESTING.md. -->
+    <Compile Include="..\Shared\TestPaths.cs" Link="TestPaths.cs" />
+    <Using Include="AppLedger.Testing" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\AppLedger.Infrastructure\AppLedger.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />

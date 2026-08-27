@@ -27,6 +27,10 @@ CI filter: `dotnet test --filter "Category!=Admin&Category!=Manual"`; coverage g
 
 ## Fixtures
 
+Fixture *locations* are resolved by `tests/Shared/TestPaths.cs`, linked into every test project rather than packaged:
+it walks up to `AppLedger.slnx`, so nothing depends on the output layout (which carries a platform segment, ADR-16),
+and both test assemblies read the shared corpora under `tests/fixtures/` through identical rules.
+
 - **Identity** (`tests/AppLedger.Core.Tests/Identity/fixtures/*.json`): the 12 mandatory scenarios in
   `03_APP_IDENTITY.md` §Test fixtures, format in the folder README. Pass = ≥ 95 % expected `app_id` matches and **zero**
   game-into-launcher merges. Every grouping bug fixed adds a fixture first (red → green).

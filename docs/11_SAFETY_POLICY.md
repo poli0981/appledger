@@ -57,8 +57,10 @@ catalog cannot remove (only extend).
 3. Resolve reparse points with `CreateFileW(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)` on each ancestor?
    No — simpler and complete: open the final path with `FILE_FLAG_BACKUP_SEMANTICS` (directory or file, read attributes
    only) and call `GetFinalPathNameByHandleW(VOLUME_NAME_DOS)`. This collapses junctions, symlinks and mount points
-   anywhere in the path. If the open fails with access denied, fall back to the lexical path and mark `unresolved=true`
-   (treated as Tier 0 for safety when the lexical path is under a Tier 0 root, Tier 3 otherwise with a warning).
+   anywhere in the path. If the open fails — access denied, or the path does not exist yet — fall back to the lexical
+   path and mark `unresolved=true`. The lexical form is then run through the **full** tier table rather than the
+   Tier-0-or-Tier-3 shortcut this document first described: failing to open something is never a reason to treat it as
+   ordinary, so a credential store we could not open stays Tier 1 and keeps its name out of every output.
 4. Drop alternate data stream suffixes (`file.txt:stream`) → the file path; ADS are never enumerated.
 5. Compare case-insensitively (ordinal, upper-invariant) with a trailing separator so `C:\WindowsFoo` is not under `C:\Windows`.
 6. Result `PathDecision { Canonical, Tier, Allowed, Reason, Unresolved }`. Tier-0/1 reasons are generic codes
@@ -100,6 +102,11 @@ Without the Agent the UI itself opens `PROCESS_QUERY_LIMITED_INFORMATION` handle
   `\\?\C:\Windows\System32\` ⇒ Tier 0; `C:\Windows\System32\drivers\etc\hosts:stream` ⇒ Tier 0 file; `C:\WindowsFoo\x` ⇒ Tier 3;
   `%USERPROFILE%\.ssh\id_ed25519` ⇒ Tier 1 with `path = null` in outputs; mixed case and trailing `. ` variants; UNC ⇒ rejected;
   relative path with `..` ⇒ rejected; a path whose final component does not exist ⇒ lexical fallback with `Unresolved`.
+Two of those cases depend on the machine rather than on the policy: creating a junction, and the existence of an 8.3
+name for the Windows directory (many installs have short-name generation disabled). Both are probed once and turned
+into a *skip* by a conditional `FactAttribute` — xUnit 2.9 has no dynamic skip — so a locked-down machine and a broken
+policy never produce the same CI result.
+
 - Access-rights test: reflection scan of Infrastructure for `OpenProcess` call sites asserting the rights constant;
   a banned-symbols analyzer config for the forbidden constants.
 - Tier-2 test: given a fixture with `EasyAntiCheat.sys` in ImageLoad for PID X, the resolver must produce an instance
