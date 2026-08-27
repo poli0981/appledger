@@ -117,8 +117,9 @@ below 10 GB), and icons.
 ## Signing & verification
 
 - Format: [minisign](https://jedisct1.github.io/minisign/) detached signature (`Ed25519`; pre-hashed mode using
-  `BLAKE2b-512`, `ED` algorithm tag). Public key `{{CATALOG_PUBKEY}}` embedded in `AppLedger.Infrastructure` as a
-  constant and shown in Settings › Catalog.
+  `BLAKE2b-512`, `ED` algorithm tag). Public key id **`6ED9A5D305231FDB`** embedded in
+  `AppLedger.Infrastructure/Catalog/CatalogPublicKey.cs` as a constant and shown in Settings › Catalog. The secret
+  half exists only as the `CATALOG_MINISIGN_KEY` GitHub secret and on the maintainer's machine — never in this repo.
 - **Where the code lives** (pinned at kickoff): parsing a `.minisig`/`.pub` is pure string and base64 work and lives in
   `AppLedger.Core/Catalog/MinisignSignature.cs`; the Ed25519 + BLAKE2b-512 verification needs `NSec.Cryptography`
   and lives in `AppLedger.Infrastructure` behind the Core port `ICatalogVerifier`. Core keeps no crypto dependency.
@@ -128,11 +129,15 @@ below 10 GB), and icons.
 - CI signs at release with `minisign -S -m appledger-catalog.json -s <secret from GitHub secret>`; the secret key never
   lives in the repo. Rotation: embed the new public key in an app update first, sign with both for one release cycle.
 - The bundled catalog is also signed; the Agent verifies even the bundled copy (defense against tampering in `current\`).
-- **While `{{CATALOG_PUBKEY}}` is unresolved there is nothing to verify against, so nothing is loaded.** The loader
-  fails closed: `CatalogLoader.TryCreateFromEmbeddedKey` returns null, logs a Warning, and the Agent runs on the
-  built-in policy minimum with no catalog rules at all. Relaxing that to "load unsigned during development" would put
-  an unsigned rules file, on a user-writable disk, into an elevated process — exactly the hole the signature exists to
-  close. The unblock is to create the release keypair, not to add a bypass.
+- **The loader fails closed and stays that way.** If the embedded key is ever missing or mangled,
+  `CatalogLoader.TryCreateFromEmbeddedKey` returns null, logs a Warning, and the Agent runs on the built-in policy
+  minimum with no catalog rules at all. Relaxing that to "load unsigned during development" would put an unsigned rules
+  file, on a user-writable disk, into an elevated process — exactly the hole the signature exists to close. The unblock
+  is always a signature, never a bypass.
+- **Re-sign whenever the catalog changes.** A stale `.minisig` beside an edited catalog fails verification, and every
+  Agent silently drops to the built-in minimum while the schema test — which does not check signatures — stays green.
+  `ShippedCatalogSignatureTests` turns that into a failed build; it skips while no `.minisig` is committed. To sign
+  locally: `minisign -S -m catalog/appledger-catalog.json`, which writes `catalog/appledger-catalog.json.minisig`.
 
 ## Update flow
 

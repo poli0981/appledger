@@ -29,6 +29,7 @@ NSec (the same library Infrastructure uses); the `minisign` CLI is **not** requi
 
 ## Not a release key
 
-The release key exists only as the GitHub Actions secret `CATALOG_MINISIGN_KEY` (`docs/18_CI_CD.md`). Nothing in this
-folder ever signs a shipped catalog, and the public key embedded in `AppLedger.Infrastructure`
-(`{{CATALOG_PUBKEY}}`) is not the one here.
+The release secret key exists only as the GitHub Actions secret `CATALOG_MINISIGN_KEY` (`docs/18_CI_CD.md`) and on the
+maintainer's machine. Nothing in this folder ever signs a shipped catalog: the key embedded in
+`AppLedger.Infrastructure` is `6ED9A5D305231FDB`, and `CatalogLoaderTests` asserts it is neither of the two key ids
+above.
