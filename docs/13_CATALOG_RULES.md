@@ -128,6 +128,11 @@ below 10 GB), and icons.
 - CI signs at release with `minisign -S -m appledger-catalog.json -s <secret from GitHub secret>`; the secret key never
   lives in the repo. Rotation: embed the new public key in an app update first, sign with both for one release cycle.
 - The bundled catalog is also signed; the Agent verifies even the bundled copy (defense against tampering in `current\`).
+- **While `{{CATALOG_PUBKEY}}` is unresolved there is nothing to verify against, so nothing is loaded.** The loader
+  fails closed: `CatalogLoader.TryCreateFromEmbeddedKey` returns null, logs a Warning, and the Agent runs on the
+  built-in policy minimum with no catalog rules at all. Relaxing that to "load unsigned during development" would put
+  an unsigned rules file, on a user-writable disk, into an elevated process — exactly the hole the signature exists to
+  close. The unblock is to create the release keypair, not to add a bypass.
 
 ## Update flow
 

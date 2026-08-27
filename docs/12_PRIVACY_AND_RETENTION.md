@@ -40,6 +40,9 @@ still the most sensitive dataset on the machine. These rules are product decisio
 | Scan caches | `cache\scan\*.bin` | medium (directory names) | all / app |
 | Logs | `logs\*.log` | low at Information (redacted), **high** at Debug | "Clear logs" + 7-day rolling |
 | Settings, overrides | `settings`, `app_overrides`, `settings.json` | low | "Reset settings" only (kept on purge) |
+| Schema version, agent version, overrides revision | `meta` | none | never (recreated by the migrator) |
+| Catalog version, fetch time, key id, last error | `catalog_state` | none | all |
+| Pre-migration database copies | `appledger.db.bak-<schema>` | as the database it copies | all; removed through `DataRootFiles` |
 
 Adding a stored field without a row here fails review (`CLAUDE.md` DoD).
 

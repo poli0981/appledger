@@ -26,6 +26,11 @@
     <InternalsVisibleTo Include="AppLedger.Infrastructure.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Migration scripts are embedded, not shipped as files: the install folder is user-writable,
+         and an elevated process reading its schema SQL from there would be a real hole. docs/11. -->
+    <EmbeddedResource Include="Storage/Migrations/*.sql" />
+  </ItemGroup>
+  <ItemGroup>
     <AdditionalFiles Include="NativeMethods.txt" />
     <AdditionalFiles Include="NativeMethods.json" />
   </ItemGroup>
