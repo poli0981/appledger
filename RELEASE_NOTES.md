@@ -1,3 +1,25 @@
+# 0.2.0 — unreleased
+
+The Agent's collection path, end to end but not yet hosted. Still nothing user-facing.
+
+- **v0.1 closed.** `AppLedger.Infrastructure` went from zero source files to the full adapter set: known
+  folders, path canonicalization, `PolicyGuard`, the data root, the ntdll process poller, enrichment,
+  PE/Authenticode, SQLite storage and migrations, and catalog signature verification.
+- **The collector pipeline runs**: system snapshot to per-instance deltas to per-app samples to
+  `metrics_1m` rows. `CollectorHost` owns the write ordering that keeps the `metrics_1m` to `apps` foreign
+  key satisfied.
+- **Sensors**: `EtwHub` (two real-time sessions), `ConnectionPoller` (IP Helper, works unelevated),
+  `GpuPoller` (PDH). Every one of them reports `Unavailable` with a reason rather than reporting zero when
+  it cannot run — an absent GPU counter set and a missing ETW session are normal states, not faults.
+- **The catalog is signed and loads.** Public key `6ED9A5D305231FDB` is embedded, the signature is
+  committed, and a test fails the build if the two ever drift apart.
+- Numbers that were assumed and are now measured: the process poller costs 2.4 ms per poll over ~330
+  processes, and an `AppSample` is 184 bytes — which is what shrank the live ring from the documented one
+  hour to five minutes, because an hour of 100 apps would have been 66 MB against a 100 MB Agent budget.
+- Twelve findings added to `docs/24_ADR.md` §Findings, including two that only an elevated test run could
+  surface: an unguarded ETW processing loop that killed its host, and — more quietly — the same loop
+  returning cleanly and leaving the sensor claiming to be healthy while collecting nothing.
+
 # 0.1.0 — unreleased
 
 Opening phase (M0). Nothing user-facing yet; the milestones are `docs/21_ROADMAP.md`.
