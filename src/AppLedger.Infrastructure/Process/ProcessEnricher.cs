@@ -134,7 +134,7 @@ public sealed class ProcessEnricher : IProcessEnricher
             fixed (byte* p = buffer)
             {
                 status = NtDll.NtQueryInformationProcess(
-                    handle.DangerousGetHandle(), NtDll.ProcessCommandLineInformation, p, size, out returned);
+                    handle, NtDll.ProcessCommandLineInformation, p, size, out returned);
 
                 if (NtDll.Succeeded(status))
                 {
