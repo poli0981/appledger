@@ -143,10 +143,16 @@ public sealed class EtwHubAdminTests
         {
             second.Health.State.ShouldBe(SensorState.Running);
 
-            // The abandoned hub's loop ended because its session was taken away. It must have noticed and
-            // said so, rather than either crashing or still claiming to be running.
+            // The abandoned hub's loop ended because its session was taken away. It must notice and say so.
+            // Note the shape of that ending: a clean external stop makes Process() *return*, it does not
+            // throw — so a guard that only caught exceptions would leave this hub reporting Running while
+            // collecting nothing, which is the quiet version of the crash this test also covers.
             await WaitUntilAsync(() => first.Health.State != SensorState.Running, TimeSpan.FromSeconds(10));
-            first.Health.State.ShouldBe(SensorState.Unavailable);
+
+            first.Health.State.ShouldBe(
+                SensorState.Unavailable,
+                "a hub whose session was stopped underneath it must stop claiming to be running");
+            first.Health.Detail.ShouldNotBeNullOrWhiteSpace("the health report has to say why");
         }
         finally
         {
