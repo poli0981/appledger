@@ -70,7 +70,7 @@ security boundary — see `11_SAFETY_POLICY.md` §Privilege boundary. Service mo
 sensors (own threads)          accumulators (lock-free per (pid,createTime))        every 1 s                 every 1 m
 ProcessPoller ──────────────►  ProcessTable: cpu/mem/io deltas, new/exited         ─┐
 EtwHub.Network ─────────────►  NetAccumulator[pid]: in/out bytes, per-endpoint      ├─► Snapshot (app-level) ─► LiveStream (pipe)
-EtwHub.DiskIO ──────────────►  DiskAccumulator[pid]: read/write bytes, IOPS         │        │                    RingBuffer 1 h (memory)
+EtwHub.DiskIO ──────────────►  DiskAccumulator[pid]: read/write bytes, IOPS         │        │                    RingBuffer 5 min (memory)
 EtwHub.Process/ImageLoad ───►  lifecycle events, runtime detection                  │        └──────────────────► Rollup1m ─► SQLite
 EtwHub.DNS ─────────────────►  DnsMap: pid → queries, ip → name                     │
 GpuPoller (2 s) ────────────►  GpuAccumulator[pid]                                  │

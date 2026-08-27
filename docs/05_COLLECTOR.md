@@ -19,7 +19,7 @@ supervises and aggregates. `CLAUDE.md` Solution layout is the authority for this
 | `EtwHub` | one thread per session inside TraceEvent's `Process()` loop + our handlers | event-driven | per-PID accumulators |
 | `GpuPoller` | dedicated | 2 s | `GpuAccumulator` |
 | `ConnectionPoller` | dedicated | 1 s | `ConnTable` |
-| `SnapshotBuilder` | timer | 1 s, aligned to wall-clock seconds | `AppSnapshot[]` → live channel + 1-h ring |
+| `SnapshotBuilder` | timer | 1 s, aligned to wall-clock seconds | `AppSnapshot[]` → live channel + 5-min ring |
 | `Rollup1m` | timer | on minute boundary | `metrics_1m` rows |
 | `RollupJobs` | background | hourly / daily (first idle after 03:00 local) | `metrics_1h`, `metrics_1d`, `disk_snapshots` |
 | `DiskScanner` | dedicated, `Lowest`, I/O priority Low | event/scheduled | `disk_locations`, `disk_snapshots` |
@@ -80,8 +80,8 @@ FileIO is the only noisy keyword (thousands of events/s during large copies). Po
 2. For each live instance, collects `{cpuUser, cpuKernel, wsPrivate, commit, ws, ioRead, ioWrite, diskRead, diskWrite,
    netIn, netOut, gpuPct, vramDed, vramShared, threads, handles, hardFaults}` — deltas for counters, values for gauges.
 3. Maps to `app_id` via `IdentityResolver` cache; sums per app; computes `procs`.
-4. Publishes `AppSnapshot[]` (sorted by `app_id`) to: the live channel (bounded 10, drop-oldest), the 1-h ring
-   (3600 × apps; ~2 MB for 100 apps), and `Rollup1m`'s minute buffer.
+4. Publishes `AppSnapshot[]` (sorted by `app_id`) to: the live channel (bounded 10, drop-oldest), the **5-min ring**
+   (300 × apps ≈ 5.5 MB for 100 apps), and `Rollup1m`'s minute buffer.
 5. Self-measures: own CPU time and private WS → `Health`.
 
 Per-endpoint network accumulation (`NetAccumulator.Endpoints: Dictionary<(proto, daddr, dport), (in, out, first, last)>`)
@@ -107,7 +107,7 @@ Percent values are stored as `REAL` 0–100 with one decimal; bytes as `INTEGER`
 | ESTATS | only for the app in view | per-connection cost, admin |
 | DNS map size | 10 000 ip→name entries, LRU | memory |
 | Endpoint map | 2 000 per app | memory |
-| 1-h ring | 3600 s × live apps | ~2 MB / 100 apps |
+| Ring window | 300 s × live apps (1 min when idle) | measured: `AppSample` is 184 B, so 5.5 MB / 100 apps |
 | Idle detection | no UI for 10 min → `Idle` profile (poller 2 s, no GPU polling, ring keeps 15 min) | budget |
 
 The S1 harness (`spikes/S1.EtwBudget`) hosts this library with the real sessions and logs its own CPU/RSS every 10 s.
