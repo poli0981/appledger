@@ -108,6 +108,10 @@ but bytes and connections are still counted so "Windows Update pulled 4 GB" is v
 - Authenticode: signer subject, issuer, thumbprint, timestamp, status (`Valid`/`Expired`/`Untrusted`/`Unsigned`/`CatalogSigned`)
   via `WinVerifyTrust` with `WTD_CACHE_ONLY_URL_RETRIEVAL | WTD_REVOCATION_CHECK_NONE` (no network). Tier-0 files are
   reported `CatalogSigned` without computing catalog hashes.
+  **Known limitation (v0.1):** verification reads *embedded* signatures only. A file **outside** Tier 0 that is signed
+  through a Windows security catalog and carries no embedded signature therefore reports `Unsigned`, because
+  `CatalogSigned` is currently reachable only through the Tier-0 short-circuit. Closing it means the `CryptCATAdmin*`
+  hash lookup and belongs to v0.3, where the status is first displayed (`docs/24_ADR.md` §Findings).
 - SHA-256 of the main executable (streamed, background priority). Changes → `VersionChanged` event even if version strings
   are identical (silent updates).
 - Icon: `SHGetFileInfo`/`ExtractIconEx` at 32 and 256 px → PNG in `cache\icons\<app_id>.png`; MSIX logo from the manifest.
