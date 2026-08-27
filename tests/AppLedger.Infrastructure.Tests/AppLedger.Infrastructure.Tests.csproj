@@ -4,6 +4,8 @@
     <Platforms>x64;ARM64</Platforms>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- LibraryImport in TestSupport/Capabilities.cs generates unsafe marshalling code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <!-- Shared fixture locator, linked rather than packaged. docs/19_TESTING.md. -->

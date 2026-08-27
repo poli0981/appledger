@@ -98,35 +98,49 @@ public sealed class PolicyGuardTests : IDisposable
     }
 
     /// <summary>
-    /// 8.3 short names are a second spelling of the same directory, and a path may mix the two. Whether a
-    /// volume still generates short names is a machine setting, so a machine without them skips.
+    /// 8.3 short names are a second spelling of the same directory, so a Tier-0 path written in short form
+    /// must still land in Tier 0. Whether a volume generates short names at all is a machine setting, so a
+    /// machine without them skips.
     /// </summary>
     /// <remarks>
-    /// The short form is only ever taken for the Windows directory itself, never guessed for a child:
-    /// which sibling owns <c>SYSTEM~1</c> depends on creation order, so asserting it would be asserting a
-    /// property of the machine rather than of the policy.
+    /// The pair is discovered with <c>GetShortPathNameW</c>, never guessed. The fixture docs/11 originally
+    /// named — <c>C:\WINDOW~1\SYSTEM~1</c> — cannot exist: both <c>Windows</c> and <c>System32</c> are
+    /// already 8.3-legal and therefore keep their own names.
     /// </remarks>
     [ShortNameFact]
-    public void Evaluate_ShortWindowsRoot_IsExpandedBeforeTiering()
+    public void Evaluate_ShortNamedWindowsDirectory_IsExpandedBeforeTiering()
     {
-        var decision = _guard.Evaluate(Capabilities.ShortWindowsRoot!);
+        var longPath = Capabilities.ShortNamedWindowsDirectory!;
+        Capabilities.TryGetShortPath(longPath, out var shortPath).ShouldBeTrue();
+
+        var decision = _guard.Evaluate(shortPath!);
 
         decision.Unresolved.ShouldBeFalse();
+        decision.Canonical.ShouldBe(longPath, StringCompareShould.IgnoreCase);
         decision.Tier.ShouldBe(PathTier.ProtectedOs);
-        decision.Canonical.ShouldBe(_folders.Windows, StringCompareShould.IgnoreCase);
     }
 
     /// <summary>A short component in the middle of an otherwise long path is expanded too.</summary>
     [ShortNameFact]
     public void Evaluate_ShortComponentInsideALongPath_IsExpandedBeforeTiering()
     {
-        var mixed = Path.Combine(Capabilities.ShortWindowsRoot!, "System32");
+        var longPath = Capabilities.ShortNamedWindowsDirectory!;
+        Capabilities.TryGetShortPath(longPath, out var shortPath).ShouldBeTrue();
+
+        // Append a component that exists under every directory shape we might have picked: itself.
+        var child = Directory.EnumerateFileSystemEntries(longPath).FirstOrDefault();
+        if (child is null)
+        {
+            return;
+        }
+
+        var mixed = Path.Combine(shortPath!, Path.GetFileName(child));
 
         var decision = _guard.Evaluate(mixed);
 
         decision.Unresolved.ShouldBeFalse();
+        decision.Canonical.ShouldBe(child, StringCompareShould.IgnoreCase);
         decision.Tier.ShouldBe(PathTier.ProtectedOs);
-        decision.Canonical.ShouldBe(System32, StringCompareShould.IgnoreCase);
     }
 
     /// <summary>

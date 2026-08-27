@@ -98,14 +98,17 @@ Without the Agent the UI itself opens `PROCESS_QUERY_LIMITED_INFORMATION` handle
 
 ## Tests (`tests/AppLedger.Infrastructure.Tests/Policy`)
 
-- Canonicalization fixtures: junction `%TEMP%\al-junc → %SystemRoot%\System32` ⇒ Tier 0; `C:\WINDOW~1\SYSTEM~1` ⇒ Tier 0;
+- Canonicalization fixtures: junction `%TEMP%\al-junc → %SystemRoot%\System32` ⇒ Tier 0; a **discovered** 8.3 short
+  name under `%SystemRoot%` ⇒ Tier 0 (`C:\WINDOW~1\SYSTEM~1`, which an earlier draft of this list named, cannot exist:
+  `Windows` and `System32` are both 8.3-legal already and so keep their own names — the test asks `GetShortPathNameW`
+  for a real pair instead of inventing one);
   `\\?\C:\Windows\System32\` ⇒ Tier 0; `C:\Windows\System32\drivers\etc\hosts:stream` ⇒ Tier 0 file; `C:\WindowsFoo\x` ⇒ Tier 3;
   `%USERPROFILE%\.ssh\id_ed25519` ⇒ Tier 1 with `path = null` in outputs; mixed case and trailing `. ` variants; UNC ⇒ rejected;
   relative path with `..` ⇒ rejected; a path whose final component does not exist ⇒ lexical fallback with `Unresolved`.
-Two of those cases depend on the machine rather than on the policy: creating a junction, and the existence of an 8.3
-name for the Windows directory (many installs have short-name generation disabled). Both are probed once and turned
-into a *skip* by a conditional `FactAttribute` — xUnit 2.9 has no dynamic skip — so a locked-down machine and a broken
-policy never produce the same CI result.
+Two of those cases depend on the machine rather than on the policy: creating a junction, and whether the volume still
+generates 8.3 short names at all (many installs have them disabled). Both are probed once and turned into a *skip* by a
+conditional `FactAttribute` — xUnit 2.9 has no dynamic skip — so a locked-down machine and a broken policy never
+produce the same CI result.
 
 - Access-rights test: reflection scan of Infrastructure for `OpenProcess` call sites asserting the rights constant;
   a banned-symbols analyzer config for the forbidden constants.
