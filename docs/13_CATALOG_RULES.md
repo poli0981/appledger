@@ -7,8 +7,11 @@ Fixing "Discord is grouped wrong" is a JSON PR, not a release.
 ## Files
 
 - `catalog/appledger-catalog.json` — the rules (UTF-8, ≤ 4 MB).
-- `catalog/appledger-catalog.json.minisig` — detached minisign signature (generated at release by CI from a secret key;
-  never committed).
+- `catalog/appledger-catalog.json.minisig` — detached minisign signature, **committed**. A detached signature is
+  public data and leaks nothing; keeping it out of the repo would mean dev builds and CI could never load the
+  catalog at all, and the signature guard test could never run. The secret key is what never enters the repo.
+  Consequence: **re-sign whenever the catalog changes**. A catalog PR from someone without the key fails
+  `ShippedCatalogSignatureTests` until the maintainer re-signs — a visible failure rather than a silent one.
 - `catalog/public_suffix_list.dat` — Mozilla PSL (MPL-2.0), bundled, refreshed with the catalog.
 - Installed copies: `DataRoot\catalog\` (verified downloads) and the package's `catalog\` (fallback).
 

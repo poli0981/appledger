@@ -8,6 +8,9 @@ entry point for humans too) and `docs/23_NON_GOALS.md` before proposing features
 - **Catalog entries** (`catalog/appledger-catalog.json`): an app grouped wrongly, a missing launcher helper, a data/cache
   folder, an anti-cheat service/driver name. Follow the checklist in `docs/13_CATALOG_RULES.md` and add an identity
   fixture when grouping changes (`tests/AppLedger.Core.Tests/Identity/fixtures`).
+  Expect `ShippedCatalogSignatureTests` to fail on your PR: the catalog is signed, only the maintainer holds the key,
+  and re-signing is the last step before merge. That failure is the guard working — a stale signature would otherwise
+  leave every Agent silently running with no catalog rules at all.
 - **Translations** (`vi`, `ja`) in `src/AppLedger.App/Resources/Strings.*.resx` — `docs/14_I18N.md`.
 - **Recorded fixtures** for parsers (launcher manifests, USN buffers, DNS result strings) with personal data scrubbed.
 
