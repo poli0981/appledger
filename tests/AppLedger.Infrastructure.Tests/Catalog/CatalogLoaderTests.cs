@@ -137,25 +137,46 @@ public sealed class CatalogLoaderTests : IDisposable
     }
 
     /// <summary>
-    /// The one that matters most. <c>{{CATALOG_PUBKEY}}</c> is unresolved until the first release, and a
-    /// build with no trusted key must load nothing rather than load without checking. If this ever returns
-    /// a loader, an elevated Agent will happily read unsigned rules off a user-writable disk.
+    /// The release key is embedded, so a build can be built into a working verifier. The key id is
+    /// asserted rather than just "some key parsed": a build that shipped the *test* key would otherwise
+    /// look perfectly healthy while trusting a keypair whose secret half is in this repository.
     /// </summary>
     [Fact]
-    public void TryCreateFromEmbeddedKey_WithThePlaceholderStillInPlace_FailsClosed()
+    public void TryGetEmbedded_ReturnsTheReleaseKeyAndNotATestKey()
     {
-        CatalogPublicKey.IsResolved.ShouldBeFalse(
-            "when the release key lands, this test documents that the placeholder is gone");
+        CatalogPublicKey.IsResolved.ShouldBeTrue();
+        CatalogPublicKey.TryGetEmbedded(out var key).ShouldBeTrue();
 
-        CatalogLoader.TryCreateFromEmbeddedKey(EnvExpander.ForValidation, NullLogger<CatalogLoader>.Instance)
-            .ShouldBeNull();
+        key!.KeyIdHex.ShouldBe("6ED9A5D305231FDB");
+        key.KeyIdHex.ShouldNotBe("05E0E1316342AA8C", "that is the test corpus key");
+        key.KeyIdHex.ShouldNotBe("D35927E1F7DC5C7A", "that is the wrong-key fixture");
     }
 
     [Fact]
-    public void TryGetEmbedded_WithThePlaceholderStillInPlace_ReturnsNoKey()
+    public void TryCreateFromEmbeddedKey_WithAKeyEmbedded_ProducesAWorkingLoader() =>
+        CatalogLoader.TryCreateFromEmbeddedKey(EnvExpander.ForValidation, NullLogger<CatalogLoader>.Instance)
+            .ShouldNotBeNull();
+
+    /// <summary>
+    /// The fail-closed branches, which the embedded key now bypasses. They still have to work: a build that
+    /// forgot the substitution, or shipped a mangled key, must load nothing rather than load without
+    /// checking. An elevated Agent reading unsigned rules off a user-writable disk is the whole failure
+    /// this refuses.
+    /// </summary>
+    [Theory]
+    [InlineData(CatalogPublicKey.Placeholder)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("untrusted comment: mangled\nnot base64")]
+    [InlineData("untrusted comment: too short\nRWTbHyMF06XZbg==")]
+    public void TryParse_UnusableEmbeddedKey_FailsClosed(string? embedded)
     {
-        CatalogPublicKey.TryGetEmbedded(out var key).ShouldBeFalse();
+        CatalogPublicKey.TryParse(embedded, out var key).ShouldBeFalse();
 
         key.ShouldBeNull();
     }
+
+    [Fact]
+    public void TryParse_NullEmbeddedKey_FailsClosed() =>
+        CatalogPublicKey.TryParse(null, out _).ShouldBeFalse();
 }

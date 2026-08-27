@@ -9,46 +9,55 @@ namespace AppLedger.Infrastructure.Catalog;
 /// folder are both user-writable.
 /// </summary>
 /// <remarks>
-/// <b>The key does not exist yet.</b> <c>{{CATALOG_PUBKEY}}</c> is filled in at the first release, when
-/// the matching secret key is created as the <c>CATALOG_MINISIGN_KEY</c> GitHub secret
-/// (docs/18_CI_CD.md). Until then <see cref="TryGetEmbedded"/> returns false, and every caller must
-/// treat that as "load nothing" rather than as "load without checking" — which is what
-/// <see cref="CatalogLoader"/> does.
+/// The matching secret key exists only as the <c>CATALOG_MINISIGN_KEY</c> GitHub Actions secret
+/// (docs/18_CI_CD.md) and never in this repository. Rotation embeds the new public key in an app update
+/// first, then signs with both for one release cycle — a key swapped in the other order would reject every
+/// catalog an already-installed build has.
 /// </remarks>
 public static class CatalogPublicKey
 {
     /// <summary>
-    /// The placeholder the release process replaces. It is deliberately not a parseable key: a build that
-    /// forgot to substitute it must fail closed, not verify against something that happens to decode.
+    /// The value the constant held before a real key existed. Kept so
+    /// <see cref="TryParse(string, out MinisignPublicKey?)"/> can still recognise an unsubstituted build
+    /// and refuse it: a build that forgot the key must fail closed, not verify against something that
+    /// happens to decode.
     /// </summary>
     public const string Placeholder = "{{CATALOG_PUBKEY}}";
 
     /// <summary>
-    /// The embedded minisign public key file contents, or <see cref="Placeholder"/> before the first
-    /// release.
+    /// The embedded minisign public key, verbatim from <c>minisign.pub</c>. Key id
+    /// <c>6ED9A5D305231FDB</c>, which is what Settings › Catalog shows the user.
     /// </summary>
-    public static string Embedded { get; } = Placeholder;
+    public const string Embedded =
+        "untrusted comment: minisign public key 6ED9A5D305231FDB\n"
+        + "RWTbHyMF06XZbhmcgGC9Wp3u98TDwa2s0bySiAsPn9kuv4JiuRPXtqyc\n";
 
     /// <summary>True once a real key has been embedded.</summary>
-    public static bool IsResolved => !string.Equals(Embedded, Placeholder, StringComparison.Ordinal);
+    public static bool IsResolved => !string.Equals(Embedded.Trim(), Placeholder, StringComparison.Ordinal);
 
     /// <summary>
-    /// Parses the embedded key. Returns false while the placeholder is unresolved, or if the embedded text
-    /// is not a valid minisign public key — both of which mean the same thing to a caller: there is no key
-    /// to verify against, so nothing may be loaded.
+    /// Parses the embedded key. Returns false for an unsubstituted build and for text that is not a valid
+    /// minisign public key — both of which mean the same thing to a caller: there is no key to verify
+    /// against, so nothing may be loaded.
     /// </summary>
-    public static bool TryGetEmbedded([NotNullWhen(true)] out MinisignPublicKey? key)
+    public static bool TryGetEmbedded([NotNullWhen(true)] out MinisignPublicKey? key) => TryParse(Embedded, out key);
+
+    /// <summary>
+    /// The parse behind <see cref="TryGetEmbedded"/>, exposed so the fail-closed branches are testable
+    /// without rebuilding the assembly with a different constant.
+    /// </summary>
+    public static bool TryParse(string? embedded, [NotNullWhen(true)] out MinisignPublicKey? key)
     {
         key = null;
 
-        if (!IsResolved)
+        if (string.IsNullOrWhiteSpace(embedded) || string.Equals(embedded.Trim(), Placeholder, StringComparison.Ordinal))
         {
             return false;
         }
 
         try
         {
-            key = MinisignSignature.ParsePublicKey(Embedded);
+            key = MinisignSignature.ParsePublicKey(embedded);
             return true;
         }
         catch (FormatException)

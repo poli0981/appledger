@@ -124,7 +124,6 @@ Windows-specific is a review-blocking bug.
 - Never add analytics, crash reporting SDKs, or any network call not listed in `docs/12_PRIVACY_AND_RETENTION.md` §Network calls.
 - Never weaken Tier 0/1/2 policy to make a demo look better.
 
-Placeholders still unresolved: `{{RELEASE_DATE}}` and `{{CATALOG_PUBKEY}}` (minisign public key), both filled at the
-first release, plus `{{USER}}`/`{{USER_SID}}`/`{{AGENT_EXE}}`/`{{AGENT_DIR}}` in `docs/16`, which are substituted at
+Placeholders still unresolved: `{{RELEASE_DATE}}`, filled at the first release, plus `{{USER}}`/`{{USER_SID}}`/`{{AGENT_EXE}}`/`{{AGENT_DIR}}` in `docs/16`, which are substituted at
 runtime when the Scheduled Task XML is written. Repo URL, author, contact addresses and the Discord invite were
 filled in at kickoff (2026-08-23).
