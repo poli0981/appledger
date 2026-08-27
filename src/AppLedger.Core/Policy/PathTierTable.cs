@@ -14,6 +14,7 @@ namespace AppLedger.Core.Policy;
 public sealed class PathTierTable
 {
     private readonly string[] _protectedOsRoots;
+    private readonly PathGlob[] _protectedGlobs;
     private readonly PathGlob[] _sensitiveGlobs;
     private readonly string[] _sensitiveRoots;
     private readonly string? _dataRoot;
@@ -23,11 +24,16 @@ public sealed class PathTierTable
     /// <param name="sensitiveRoots">Canonical Tier-1 directories.</param>
     /// <param name="sensitiveGlobs">Tier-1 globs from the catalog, already environment-expanded.</param>
     /// <param name="dataRoot">The AppLedger data root, the only place we ever write.</param>
+    /// <param name="protectedGlobs">
+    /// Tier-0 globs from the catalog's <c>protected_paths</c>, already environment-expanded. They extend
+    /// the built-in minimum; nothing here can remove a root passed in <paramref name="protectedOsRoots"/>.
+    /// </param>
     public PathTierTable(
         IReadOnlyList<string> protectedOsRoots,
         IReadOnlyList<string> sensitiveRoots,
         IReadOnlyList<PathGlob> sensitiveGlobs,
-        string? dataRoot = null)
+        string? dataRoot = null,
+        IReadOnlyList<PathGlob>? protectedGlobs = null)
     {
         ArgumentNullException.ThrowIfNull(protectedOsRoots);
         ArgumentNullException.ThrowIfNull(sensitiveRoots);
@@ -36,6 +42,7 @@ public sealed class PathTierTable
         _protectedOsRoots = [.. protectedOsRoots];
         _sensitiveRoots = [.. sensitiveRoots];
         _sensitiveGlobs = [.. sensitiveGlobs];
+        _protectedGlobs = protectedGlobs is null ? [] : [.. protectedGlobs];
         _dataRoot = dataRoot;
     }
 
@@ -64,6 +71,15 @@ public sealed class PathTierTable
         foreach (var root in _protectedOsRoots)
         {
             if (PathRules.IsUnder(canonicalPath, root))
+            {
+                reason = PathDenyReason.ProtectedOs;
+                return PathTier.ProtectedOs;
+            }
+        }
+
+        foreach (var glob in _protectedGlobs)
+        {
+            if (glob.MatchesOrContains(canonicalPath))
             {
                 reason = PathDenyReason.ProtectedOs;
                 return PathTier.ProtectedOs;

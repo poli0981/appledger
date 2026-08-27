@@ -4,7 +4,14 @@
     <Platforms>x64;ARM64</Platforms>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- LibraryImport in TestSupport/Capabilities.cs generates unsafe marshalling code. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Shared fixture locator, linked rather than packaged. docs/19_TESTING.md. -->
+    <Compile Include="..\Shared\TestPaths.cs" Link="TestPaths.cs" />
+    <Using Include="AppLedger.Testing" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\AppLedger.Infrastructure\AppLedger.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

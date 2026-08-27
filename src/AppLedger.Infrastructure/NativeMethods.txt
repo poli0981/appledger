@@ -20,10 +20,15 @@ GetClassName
 IsHungAppWindow
 // --- paths / policy ---
 GetFinalPathNameByHandle
+// CreateFile is here only to obtain the handle GetFinalPathNameByHandle needs: a directory can only be
+// opened with FILE_FLAG_BACKUP_SEMANTICS, which no BCL API exposes. Read attributes only, never write.
+CreateFile
 GetLongPathName
 QueryDosDevice
 SHGetKnownFolderPath
 SHGetFileInfo
+FOLDERID_Profile
+FOLDERID_Public
 FOLDERID_Windows
 FOLDERID_System
 FOLDERID_SystemX86

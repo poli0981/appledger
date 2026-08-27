@@ -21,6 +21,11 @@
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Adapter smoke tests assert P/Invoke shapes and struct offsets, which are internal because
+         NativeMethods.json sets "public": false. docs/19_TESTING.md, adapter smoke layer. -->
+    <InternalsVisibleTo Include="AppLedger.Infrastructure.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <AdditionalFiles Include="NativeMethods.txt" />
     <AdditionalFiles Include="NativeMethods.json" />
   </ItemGroup>
