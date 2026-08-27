@@ -120,11 +120,13 @@ public sealed class EtwHubAdminTests
     }
 
     /// <summary>
-    /// The case that makes a restart work. A crashed Agent leaves its session running, and creating one
-    /// with a name already in use fails — so starting twice in a row must succeed the second time too.
+    /// The case that makes a restart work, and the one that found a crash the first time it was run for
+    /// real: reclaiming a session pulls it out from under the abandoned hub's <c>Process()</c> loop, which
+    /// throws — and an exception on a background thread takes the whole process with it unless the loop
+    /// guards itself. This test aborting the run instead of failing is what that bug looked like.
     /// </summary>
     [Fact]
-    public async Task StartAsync_WithAStaleSessionOfOurOwnName_ReclaimsIt()
+    public async Task StartAsync_WithAStaleSessionOfOurOwnName_ReclaimsItWithoutKillingTheProcess()
     {
         EtwHub.CanCreateSessions.ShouldBeTrue("run this from an elevated terminal");
 
@@ -140,10 +142,25 @@ public sealed class EtwHubAdminTests
         try
         {
             second.Health.State.ShouldBe(SensorState.Running);
+
+            // The abandoned hub's loop ended because its session was taken away. It must have noticed and
+            // said so, rather than either crashing or still claiming to be running.
+            await WaitUntilAsync(() => first.Health.State != SensorState.Running, TimeSpan.FromSeconds(10));
+            first.Health.State.ShouldBe(SensorState.Unavailable);
         }
         finally
         {
+            first.Dispose();
             await second.StopAsync();
+        }
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+        while (DateTimeOffset.UtcNow < deadline && !condition())
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
         }
     }
 

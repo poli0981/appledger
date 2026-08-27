@@ -53,6 +53,9 @@ public sealed partial class EtwHub : IEtwSource, IDisposable
     private Thread? _kernelThread;
     private Thread? _userThread;
 
+    /// <summary>Set while <c>Stop</c> runs, so the processing threads know their exception is ours.</summary>
+    private volatile bool _stopping;
+
     /// <summary>Creates the hub.</summary>
     /// <param name="logger">Structured sink. Nothing logged here carries a host, a path or a command line.</param>
     /// <param name="retryDelay">
@@ -226,9 +229,40 @@ public sealed partial class EtwHub : IEtwSource, IDisposable
         _userThread = StartProcessingThread(_user, "AppLedger.Etw.User");
     }
 
-    private static Thread StartProcessingThread(TraceEventSession session, string name)
+    /// <summary>
+    /// Runs one session's <c>Process()</c> loop on its own thread, and <b>never lets it throw</b>.
+    /// </summary>
+    /// <remarks>
+    /// An unguarded <c>Process()</c> takes the whole process down with it, because an exception on a
+    /// background thread is unhandled by definition. That is not theoretical: it kills an elevated Agent
+    /// that is meant to run for six months, and it happened here the first time these sessions were run for
+    /// real. <c>Process()</c> throws whenever the session ends underneath it — someone runs
+    /// <c>logman stop</c>, another AppLedger instance reclaims the name, the machine sleeps mid-buffer — and
+    /// none of those are worth a crash.
+    /// <para>
+    /// docs/05_COLLECTOR.md §Failure handling says a throwing handler is caught and counted rather than
+    /// re-thrown into TraceEvent's loop. The same has to be true of the loop itself.
+    /// </para>
+    /// </remarks>
+    private Thread StartProcessingThread(TraceEventSession session, string name)
     {
-        var thread = new Thread(() => session.Source.Process())
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                session.Source.Process();
+            }
+            catch (Exception ex)
+            {
+                // Expected during shutdown, when Stop has already disposed the session. Anything else means
+                // the session died under us, and the sensor is genuinely unavailable until it restarts.
+                if (!_stopping)
+                {
+                    Health = SensorHealth.Unavailable(ex.GetType().Name);
+                    LogProcessingStopped(_logger, name, ex.GetType().Name);
+                }
+            }
+        })
         {
             IsBackground = true,
             Name = name,
@@ -333,17 +367,43 @@ public sealed partial class EtwHub : IEtwSource, IDisposable
 
     private void Stop()
     {
-        _user?.Dispose();
-        _user = null;
-        _kernel?.Dispose();
-        _kernel = null;
+        // Tells the processing threads that the exception they are about to see is ours, not a fault.
+        _stopping = true;
 
-        // Process() returns once the session is disposed; joining briefly keeps a restart from racing a
-        // thread that still holds the old session name.
-        _userThread?.Join(TimeSpan.FromSeconds(2));
-        _kernelThread?.Join(TimeSpan.FromSeconds(2));
-        _userThread = null;
-        _kernelThread = null;
+        try
+        {
+            // StopProcessing before Dispose: it asks the loop to return, where Dispose pulls the session
+            // out from under a thread that is still inside it. Both end up in the same place, but only one
+            // of them does so without an exception.
+            StopProcessing(_user);
+            StopProcessing(_kernel);
+
+            _user?.Dispose();
+            _user = null;
+            _kernel?.Dispose();
+            _kernel = null;
+
+            _userThread?.Join(TimeSpan.FromSeconds(2));
+            _kernelThread?.Join(TimeSpan.FromSeconds(2));
+            _userThread = null;
+            _kernelThread = null;
+        }
+        finally
+        {
+            _stopping = false;
+        }
+    }
+
+    private static void StopProcessing(TraceEventSession? session)
+    {
+        try
+        {
+            session?.Source?.StopProcessing();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+        {
+            // The loop had already finished. Nothing to stop, and nothing worth reporting.
+        }
     }
 
     [LoggerMessage(
@@ -360,4 +420,10 @@ public sealed partial class EtwHub : IEtwSource, IDisposable
 
     [LoggerMessage(EventId = 1403, Level = LogLevel.Information, Message = "Reclaiming a stale ETW session named {Session}.")]
     private static partial void LogReclaimingSession(ILogger logger, string session);
+
+    [LoggerMessage(
+        EventId = 1404,
+        Level = LogLevel.Warning,
+        Message = "The {Session} ETW processing loop ended unexpectedly: {Error}. That sensor is now unavailable.")]
+    private static partial void LogProcessingStopped(ILogger logger, string session, string error);
 }
