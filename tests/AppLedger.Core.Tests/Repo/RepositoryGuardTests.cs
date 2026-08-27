@@ -123,6 +123,55 @@ public sealed partial class RepositoryGuardTests
             "the one right we are allowed to request must not be banned");
     }
 
+    /// <summary>
+    /// docs/11_SAFETY_POLICY.md asks for exactly this: a scan of every <c>OpenProcess</c> call site
+    /// asserting the rights constant. The banned-symbols analyzer stops the other enum members from being
+    /// named at all; this stops a future call site from passing a raw numeric mask instead.
+    /// </summary>
+    [Fact]
+    public void EveryOpenProcessCallSite_RequestsOnlyQueryLimitedInformation()
+    {
+        var offenders = new List<string>();
+
+        foreach (var file in EnumerateSourceFiles("src"))
+        {
+            var content = File.ReadAllText(file);
+            foreach (Match match in OpenProcessCall().Matches(content))
+            {
+                var window = content.Substring(match.Index, Math.Min(240, content.Length - match.Index));
+                if (!window.Contains("PROCESS_QUERY_LIMITED_INFORMATION", StringComparison.Ordinal))
+                {
+                    var line = content[..match.Index].Count(c => c == '\n') + 1;
+                    offenders.Add($"{Relative(file)}:{line}");
+                }
+            }
+        }
+
+        offenders.ShouldBeEmpty(
+            "PROCESS_QUERY_LIMITED_INFORMATION is the only right AppLedger ever requests (docs/11_SAFETY_POLICY.md)");
+    }
+
+    /// <summary>
+    /// <c>File.Delete</c> and <c>Directory.Delete</c> are banned so that deletion goes through one audited
+    /// helper. A second file suppressing RS0030 would reopen the hole quietly, which is why
+    /// <c>BannedSymbols.txt</c> names the exempt file by path rather than trusting review.
+    /// </summary>
+    [Fact]
+    public void OnlyDataRootFiles_SuppressesTheBannedApiAnalyzer()
+    {
+        var offenders = EnumerateSourceFiles("src")
+            .Where(f => File.ReadAllText(f).Contains("RS0030", StringComparison.Ordinal))
+            .Select(Relative)
+            .Where(f => !f.EndsWith("DataRootFiles.cs", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        offenders.ShouldBeEmpty("only Infrastructure/Storage/DataRootFiles.cs may suppress RS0030");
+    }
+
+    private static IEnumerable<string> EnumerateSourceFiles(string topLevelDirectory) =>
+        EnumerateFiles([".cs"])
+            .Where(f => Relative(f).StartsWith(topLevelDirectory + Path.DirectorySeparatorChar, StringComparison.Ordinal));
+
     private static IEnumerable<string> EnumerateFiles(IReadOnlyList<string> extensions) =>
         Directory.EnumerateFiles(TestPaths.RepoRoot, "*", SearchOption.AllDirectories)
             .Where(f => extensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
@@ -134,4 +183,10 @@ public sealed partial class RepositoryGuardTests
 
     [GeneratedRegex(@"<!--(.*?)-->", RegexOptions.Singleline)]
     private static partial Regex XmlComment();
+
+    // A plain word boundary is not enough: OnOpenProcess( and OpenProcessToken( would both match.
+    // The look-behind excludes an identifier character before the name, and requiring the open
+    // parenthesis immediately after it excludes the Token suffix.
+    [GeneratedRegex(@"(?<![A-Za-z0-9_])OpenProcess\s*\(")]
+    private static partial Regex OpenProcessCall();
 }

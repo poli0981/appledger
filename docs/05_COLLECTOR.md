@@ -113,6 +113,12 @@ Percent values are stored as `REAL` 0–100 with one decimal; bytes as `INTEGER`
 The S1 harness (`spikes/S1.EtwBudget`) hosts this library with the real sessions and logs its own CPU/RSS every 10 s.
 Budget violations in S1 block feature work (`20_SPIKES.md`).
 
+**Measured so far.** `ProcessPoller`'s source (`NtProcessSource`, 2026-08-27, Release, i7-14700KF) costs **2.4 ms per
+poll over ~330 processes** — one `NtQuerySystemInformation` call plus one linear pass, with the buffer retained between
+calls so the steady state allocates only the image-name strings. At the default 1 Hz that is ~0.24 % of one core, well
+inside the < 1 % budget, and the figure is reproduced by
+`NtProcessSourceTests.Snapshot_PollCost_IsReportedForTheBudgetNote` rather than being a claim.
+
 **Where the budget actually binds.** S1-lite (2026-08-23) measured ~75 MB private working set for the two sessions
 alone, with handlers that only increment counters, and 0.03 % CPU. Against a 100 MB budget that leaves roughly
 20 MB for every structure on this page plus the SQLite page cache (`06_DATA_MODEL.md` sets it to 32 MB in the

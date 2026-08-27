@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace AppLedger.Infrastructure.Tests.TestSupport;
 
 /// <summary>
@@ -9,7 +7,9 @@ namespace AppLedger.Infrastructure.Tests.TestSupport;
 /// .NET exposes <c>Directory.CreateSymbolicLink</c>, but a symlink needs Developer Mode or
 /// <c>SeCreateSymbolicLinkPrivilege</c>, while a *junction* needs neither — and a junction is what
 /// docs/11_SAFETY_POLICY.md §Tests actually specifies. There is no managed API for one, so we shell out
-/// to <c>mklink /J</c>. Creation is allowed to fail: the caller skips rather than fails, because a policy
+/// to <c>mklink /J</c>. The System.Diagnostics types are named in full because the
+/// <c>AppLedger.Infrastructure.Process</c> namespace shadows the <c>Process</c> type here.
+/// Creation is allowed to fail: the caller skips rather than fails, because a policy
 /// bug and a locked-down test machine must not look the same in CI.
 /// </remarks>
 internal static class Junctions
@@ -20,7 +20,7 @@ internal static class Junctions
     {
         try
         {
-            var startInfo = new ProcessStartInfo("cmd.exe", ["/c", "mklink", "/J", link, target])
+            var startInfo = new System.Diagnostics.ProcessStartInfo("cmd.exe", ["/c", "mklink", "/J", link, target])
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -28,7 +28,7 @@ internal static class Junctions
                 RedirectStandardError = true,
             };
 
-            using var process = Process.Start(startInfo);
+            using var process = System.Diagnostics.Process.Start(startInfo);
             if (process is null)
             {
                 return false;
