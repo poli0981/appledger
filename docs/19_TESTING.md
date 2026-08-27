@@ -34,12 +34,14 @@ and both test assemblies read the shared corpora under `tests/fixtures/` through
 - **Identity** (`tests/AppLedger.Core.Tests/Identity/fixtures/*.json`): the 12 mandatory scenarios in
   `03_APP_IDENTITY.md` §Test fixtures, format in the folder README. Pass = ≥ 95 % expected `app_id` matches and **zero**
   game-into-launcher merges. Every grouping bug fixed adds a fixture first (red → green).
-- **ETL** (`tests/fixtures/etl/`): recorded once on a dev box with a TraceEvent file session using the exact keyword set
-  of `05_COLLECTOR.md`, 60 s each, then **scrubbed**: `tools/scrub-etl.ps1` (add at kickoff) rewrites command lines and
-  file names under the user profile to `C:\Users\fixture\...` using `TraceLog` → `.etlx` is not committed, only the
-  scrubbed `.etl`. Scenarios: `idle.etl`, `chrome-browsing.etl` (bytes only; hostnames never asserted from a browser
-  fixture), `file-copy-1gb.etl`, `game-launch-steam.etl` (launcher + game + EAC service), `dns-burst.etl`,
-  `lost-events.etl` (artificially small buffers). Keep each ≤ 20 MB; Git LFS if the total exceeds 100 MB.
+- **ETL** (`tests/fixtures/etl/`): recorded on a dev box with `tools/record-etl.ps1`, which enables the exact keyword
+  set `EtwHub` uses, 60 s each. Scenarios: `idle`, `chrome-browsing` (bytes only; hostnames never asserted from a
+  browser fixture), `file-copy-1gb`, `game-launch-steam`, `dns-burst`, `lost-events`. Keep each under 20 MB.
+  **None are committed yet.** Recording needs an elevated terminal, and scrubbing is not implemented: rewriting
+  paths inside an `.etl` needs a relogger pass (`ETWReloggerTraceEventSource`), not a text substitution. Until it
+  exists, only record on a machine with nothing personal open. The handler seam (`EtwAccumulators`, which takes
+  plain event records rather than TraceEvent types) is what makes replay possible at all, and it is already
+  covered by scripted-input tests that need no fixture.
 - **Catalog**: the shipped `catalog/appledger-catalog.json` is itself a fixture — the schema test parses it strictly,
   checks every `apps[].category` ∈ `categories`, every `host_rules[].rule` is known, globs expand, ids are unique and
   kebab-case. A second copy with a typo'd field must be **rejected** (strict parsing is a feature).
