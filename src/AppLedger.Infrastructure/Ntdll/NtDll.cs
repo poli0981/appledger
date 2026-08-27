@@ -47,9 +47,13 @@ internal static unsafe partial class NtDll
         uint systemInformationLength,
         out uint returnLength);
 
+    // The handle is taken as a SafeHandle rather than an nint on purpose. With a raw handle the caller has
+    // to keep the owning SafeHandle alive across the call itself, and forgetting to is invisible: the JIT
+    // may treat the variable as dead the moment DangerousGetHandle returns, letting the finalizer close the
+    // process handle while ntdll is still using it. The generated marshalling does the AddRef/Release.
     [LibraryImport("ntdll.dll")]
     internal static partial int NtQueryInformationProcess(
-        nint processHandle,
+        SafeHandle processHandle,
         int processInformationClass,
         void* processInformation,
         uint processInformationLength,
