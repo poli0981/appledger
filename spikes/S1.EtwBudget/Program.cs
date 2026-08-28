@@ -32,17 +32,44 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
-        var minutes = ArgValue(args, "--minutes") is { } m && int.TryParse(m, CultureInfo.InvariantCulture, out var mm) ? mm : 45;
-        var outPath = ArgValue(args, "--out") ?? "s1-lite.csv";
-
         if (!IsElevated())
         {
-            Console.Error.WriteLine("S1-lite needs an elevated terminal: creating a system logger requires administrator rights.");
+            Console.Error.WriteLine("S1 needs an elevated terminal: creating a system logger requires administrator rights.");
             return 2;
         }
 
-        Console.Out.WriteLine($"S1-lite  runtime={RuntimeInformation.FrameworkDescription}  arch={RuntimeInformation.ProcessArchitecture}");
-        Console.Out.WriteLine($"         minutes={minutes}  out={outPath}");
+        Console.Out.WriteLine($"S1       runtime={RuntimeInformation.FrameworkDescription}  arch={RuntimeInformation.ProcessArchitecture}");
+
+        using var cancelled = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancelled.Cancel(); };
+
+        // Two legs, one exe. --hours runs the shipping pipeline against a temporary database; --minutes runs
+        // the ETW pre-flight that counts events without accumulating them. The pre-flight stays because it is
+        // the thing to re-run first when the full leg misses the budget: it says whether the cost is ETW's
+        // floor or ours.
+        if (ArgValue(args, "--hours") is { } h)
+        {
+            if (!double.TryParse(h, CultureInfo.InvariantCulture, out var hours) || hours <= 0)
+            {
+                Console.Error.WriteLine("--hours needs a positive number of hours.");
+                return 2;
+            }
+
+            ReclaimStaleSessions();
+
+            return await FullRun.RunAsync(hours, ArgValue(args, "--out") ?? "s1.csv", cancelled.Token)
+                .ConfigureAwait(false);
+        }
+
+        return await LiteRunAsync(args, cancelled.Token).ConfigureAwait(false);
+    }
+
+    private static async Task<int> LiteRunAsync(string[] args, CancellationToken cancellationToken)
+    {
+        var minutes = ArgValue(args, "--minutes") is { } m && int.TryParse(m, CultureInfo.InvariantCulture, out var mm) ? mm : 45;
+        var outPath = ArgValue(args, "--out") ?? "s1-lite.csv";
+
+        Console.Out.WriteLine($"S1-lite  minutes={minutes}  out={outPath}");
 
         ReclaimStaleSessions();
 
@@ -74,15 +101,16 @@ internal static class Program
         var kernelPump = RunPump(kernel, "kernel");
         var userPump = RunPump(user, "user");
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(minutes));
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromMinutes(minutes));
         Console.Out.WriteLine("         sessions live; Ctrl+C stops early.\n");
 
         var summary = await SampleLoopAsync(kernel, user, outPath, cts.Token).ConfigureAwait(false);
 
         kernel.Stop();
         user.Stop();
-        await Task.WhenAny(Task.WhenAll(kernelPump, userPump), Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+        await Task.WhenAny(Task.WhenAll(kernelPump, userPump), Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None))
+            .ConfigureAwait(false);
 
         return Report(summary, minutes);
     }

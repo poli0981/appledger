@@ -90,7 +90,9 @@ public static class AgentComposition
         var schemaVersion = new SchemaMigrator(database, root).Migrate();
         var repository = new MetricsRepository(database);
 
-        var resolver = new FallbackIdentityResolver(policy, new InstallRootHeuristic(InstallRootBoundaries(folders)));
+        var resolver = new FallbackIdentityResolver(
+            policy,
+            new InstallRootHeuristic(InstallRootBoundaries.For(folders)));
         var registry = new InstanceRegistry(policy, new ProcessEnricher(), resolver);
 
         var etw = EtwHub.CanCreateSessions ? new EtwHub(loggerFactory.CreateLogger<EtwHub>()) : null;
@@ -132,45 +134,6 @@ public static class AgentComposition
             catalogVersion,
             catalogVerified,
             schemaVersion);
-    }
-
-    /// <summary>
-    /// The directories an install root may not cross (docs/03_APP_IDENTITY.md §Install-root heuristic).
-    /// </summary>
-    /// <remarks>
-    /// Assembled here rather than exposed by <c>KnownFolders</c> because it is a <i>policy</i> list, not a
-    /// list of folders: it says where the heuristic must stop walking upwards, and adding the Windows root
-    /// to it is what stops every system binary from resolving to one enormous app.
-    /// </remarks>
-    public static IReadOnlyList<string> InstallRootBoundaries(KnownFolders folders)
-    {
-        ArgumentNullException.ThrowIfNull(folders);
-
-        var boundaries = new List<string>();
-        Add(folders.ProgramFiles);
-        Add(folders.ProgramFilesX86);
-        Add(folders.UserProgramFiles);
-        Add(folders.ProgramData);
-        Add(folders.LocalAppData);
-        Add(folders.RoamingAppData);
-        Add(folders.LocalAppDataLow);
-        Add(folders.UserProfile);
-        Add(folders.PublicUser);
-
-        foreach (var protectedRoot in folders.ProtectedOsRoots)
-        {
-            Add(protectedRoot);
-        }
-
-        return boundaries;
-
-        void Add(string? path)
-        {
-            if (!string.IsNullOrEmpty(path) && !boundaries.Contains(path, StringComparer.OrdinalIgnoreCase))
-            {
-                boundaries.Add(path);
-            }
-        }
     }
 
     private static (CatalogDocument? Catalog, string? Version, bool Verified) LoadCatalog(

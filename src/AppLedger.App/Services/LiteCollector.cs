@@ -41,7 +41,7 @@ public sealed class LiteCollector : IAsyncDisposable
         var folders = KnownFolders.Current;
         var policy = PolicyGuard.Create(catalog: null, dataRoot: null, folders: folders);
 
-        var resolver = new FallbackIdentityResolver(policy, new InstallRootHeuristic(Boundaries(folders)));
+        var resolver = new FallbackIdentityResolver(policy, new InstallRootHeuristic(InstallRootBoundaries.For(folders)));
         var registry = new InstanceRegistry(policy, new ProcessEnricher(), resolver);
 
         var gpu = new GpuPoller();
@@ -119,38 +119,5 @@ public sealed class LiteCollector : IAsyncDisposable
         }
 
         _stopping.Dispose();
-    }
-
-    /// <summary>
-    /// Where the install-root heuristic must stop walking (docs/03_APP_IDENTITY.md).
-    /// </summary>
-    private static List<string> Boundaries(KnownFolders folders)
-    {
-        var boundaries = new List<string>();
-
-        foreach (var path in (string?[])
-        [
-            folders.ProgramFiles, folders.ProgramFilesX86, folders.UserProgramFiles, folders.ProgramData,
-            folders.LocalAppData, folders.RoamingAppData, folders.LocalAppDataLow, folders.UserProfile,
-            folders.PublicUser,
-        ])
-        {
-            Add(path);
-        }
-
-        foreach (var protectedRoot in folders.ProtectedOsRoots)
-        {
-            Add(protectedRoot);
-        }
-
-        return boundaries;
-
-        void Add(string? path)
-        {
-            if (!string.IsNullOrEmpty(path) && !boundaries.Contains(path, StringComparer.OrdinalIgnoreCase))
-            {
-                boundaries.Add(path);
-            }
-        }
     }
 }

@@ -15,5 +15,14 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- docs/17_BUILD.md §Projects and TFMs: spikes reference Collector/Infrastructure. The Agent is an exe
+         and is deliberately not referenced. The point of the hours leg is that it measures the pipeline
+         without the pipe server, Serilog or the catalog, and the difference from the Agent's own numbers is
+         what those three cost. -->
+    <ProjectReference Include="..\..\src\AppLedger.Collector\AppLedger.Collector.csproj" />
+    <ProjectReference Include="..\..\src\AppLedger.Infrastructure\AppLedger.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
