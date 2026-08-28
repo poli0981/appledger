@@ -3,6 +3,13 @@ using AppLedger.Core.Collection;
 
 namespace AppLedger.Collector.Accumulators;
 
+/// <summary>One window's network byte totals, with loopback kept apart from the internet figures.</summary>
+/// <param name="InBytes">Non-loopback payload bytes received.</param>
+/// <param name="OutBytes">Non-loopback payload bytes sent.</param>
+/// <param name="InBytesLoopback">Loopback payload bytes received.</param>
+/// <param name="OutBytesLoopback">Loopback payload bytes sent.</param>
+public readonly record struct NetTotals(long InBytes, long OutBytes, long InBytesLoopback, long OutBytesLoopback);
+
 /// <summary>One remote endpoint's traffic within the current window.</summary>
 /// <param name="Protocol">Transport plus the QUIC and loopback flags, OR-ed across events.</param>
 /// <param name="InBytes">Payload bytes received.</param>
@@ -77,8 +84,33 @@ public sealed class NetAccumulator
     }
 
     /// <summary>
-    /// Empties the accumulator for the next window. Called after the per-second snapshot has taken what it
-    /// needs, so the structures stay bounded by one window rather than by uptime.
+    /// Reads the four byte totals and zeroes them in one step, leaving the endpoint breakdown alone.
+    /// </summary>
+    /// <remarks>
+    /// Read-and-zero rather than read-then-<see cref="Reset"/>: the caller holds the same lock the ETW
+    /// handler takes, so there is no instant at which an event can arrive and be dropped between the two.
+    /// A separate reset leaves exactly that gap, and the events that fall into it are the busiest ones.
+    /// <para>
+    /// The endpoint breakdown deliberately survives. It feeds <c>net_hosts_daily</c> at rollup time
+    /// (docs/10 §Byte attribution), which is a per-minute concern; clearing it every second would leave the
+    /// per-day host aggregation with nothing to aggregate.
+    /// </para>
+    /// </remarks>
+    public NetTotals TakeTotals()
+    {
+        var totals = new NetTotals(InBytes, OutBytes, InBytesLoopback, OutBytesLoopback);
+
+        InBytes = 0;
+        OutBytes = 0;
+        InBytesLoopback = 0;
+        OutBytesLoopback = 0;
+
+        return totals;
+    }
+
+    /// <summary>
+    /// Empties the accumulator completely, breakdown included. Used when a window is discarded rather than
+    /// consumed — a re-baselined tick, where nothing accumulated across the gap can be trusted.
     /// </summary>
     public void Reset()
     {

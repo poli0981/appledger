@@ -41,6 +41,74 @@ public sealed class SnapshotRingTests
             "the ring window in CollectorOptions was sized from this number; re-derive it before changing the struct");
     }
 
+    /// <summary>
+    /// Shrinking is what makes the idle profile a saving rather than a label: four of the collector's
+    /// twenty megabytes come back when nobody is drawing sparklines.
+    /// </summary>
+    [Fact]
+    public void Resize_Smaller_KeepsTheMostRecentSecondsAndDropsTheRest()
+    {
+        var ring = new SnapshotRing(TimeSpan.FromSeconds(10));
+        for (var i = 0; i < 10; i++)
+        {
+            ring.Add([Sample(Chrome, 1_700_000_000 + i, ioRead: i)]);
+        }
+
+        ring.Resize(TimeSpan.FromSeconds(3));
+
+        ring.Capacity.ShouldBe(3);
+        ring.Count.ShouldBe(3);
+
+        var kept = ring.Slice(Chrome);
+        kept.Select(s => s.IoRead).ShouldBe([7L, 8L, 9L]);
+    }
+
+    [Fact]
+    public void Resize_Larger_KeepsEverythingAndAcceptsMore()
+    {
+        var ring = new SnapshotRing(TimeSpan.FromSeconds(3));
+        for (var i = 0; i < 3; i++)
+        {
+            ring.Add([Sample(Chrome, 1_700_000_000 + i, ioRead: i)]);
+        }
+
+        ring.Resize(TimeSpan.FromSeconds(5));
+        ring.Add([Sample(Chrome, 1_700_000_003, ioRead: 3)]);
+
+        ring.Capacity.ShouldBe(5);
+        ring.Slice(Chrome).Select(s => s.IoRead).ShouldBe([0L, 1L, 2L, 3L]);
+    }
+
+    /// <summary>Resizing a partly-filled ring must not resurrect the empty slots as data.</summary>
+    [Fact]
+    public void Resize_RingNotYetFull_KeepsOnlyWhatItHeld()
+    {
+        var ring = new SnapshotRing(TimeSpan.FromSeconds(10));
+        ring.Add([Sample(Chrome, 1_700_000_000, ioRead: 1)]);
+        ring.Add([Sample(Chrome, 1_700_000_001, ioRead: 2)]);
+
+        ring.Resize(TimeSpan.FromSeconds(5));
+
+        ring.Count.ShouldBe(2);
+        ring.Slice(Chrome).Select(s => s.IoRead).ShouldBe([1L, 2L]);
+    }
+
+    [Fact]
+    public void Resize_ToTheSameWindow_IsANoOp()
+    {
+        var ring = new SnapshotRing(TimeSpan.FromSeconds(5));
+        ring.Add([Sample(Chrome, 1_700_000_000, ioRead: 1)]);
+
+        ring.Resize(TimeSpan.FromSeconds(5));
+
+        ring.Capacity.ShouldBe(5);
+        ring.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Resize_ToNothing_Throws() =>
+        Should.Throw<ArgumentOutOfRangeException>(() => new SnapshotRing(TimeSpan.FromSeconds(5)).Resize(TimeSpan.Zero));
+
     /// <summary>The default window must fit the ~20 MB S1-lite left for everything in the collector.</summary>
     [Fact]
     public void EstimateBytes_DefaultWindowWithAHundredApps_FitsTheBudget()

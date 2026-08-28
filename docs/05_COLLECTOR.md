@@ -118,8 +118,14 @@ dictionaries must not be pre-sized to it.** One accumulator exists per network-a
 **GPU is carried forward across the off-second.** The poller runs at 2 s and snapshots at 1 s, so each reading is
 used twice. That is unbiased in the rollup, which divides by the sample count: 30 readings appearing twice over
 60 samples average to the mean of the readings. Zeroing the off-second instead would report exactly half. A reading
-older than three poll intervals is dropped rather than carried, so the idle profile — which stops GPU polling
-altogether — stops charting rather than freezing on a stale value.
+is dropped rather than carried the moment the sensor stops reporting `Running`, and every refresh clears first, so
+a process that stops using the GPU stops being charted instead of keeping its last value.
+
+**GPU polling does not stop when idle**, and this is a deliberate deviation from the §Budget controls row below as
+it was originally written. Idle means no UI is watching — it does not mean nothing is running, and the Agent is
+still writing history that the user will read tomorrow. A stored `gpu_pct` of zero would mean "we did not look",
+which is exactly the claim `01_ARCHITECTURE.md` §Degraded modes refuses to let a number make. The idle profile
+halves the poll rate anyway and for free: the tick interval doubles to 2 s, which is already the GPU cadence.
 
 ## Rollup math (Core, pure, golden-tested)
 
@@ -142,7 +148,7 @@ Percent values are stored as `REAL` 0–100 with one decimal; bytes as `INTEGER`
 | DNS map size | 10 000 ip→name entries, LRU | memory |
 | Endpoint map | 2 000 per app | memory |
 | Ring window | 300 s × live apps, shrunk to `IdleRingWindow` (60 s) when idle | measured: `AppSample` is 184 B, so 5.5 MB / 100 apps, and 1.1 MB once idle |
-| Idle detection | no UI for 10 min → `Idle` profile (poller 2 s, no GPU polling, ring shrinks to 60 s) | budget |
+| Idle detection | no UI for 10 min → `Idle` profile (poller 2 s, ring shrinks to 60 s; GPU keeps its own 2 s cadence — see §Accumulators) | budget |
 
 The S1 harness (`spikes/S1.EtwBudget`) hosts this library with the real sessions and logs its own CPU/RSS every 10 s.
 Budget violations in S1 block feature work (`20_SPIKES.md`).
@@ -152,6 +158,15 @@ poll over ~330 processes** — one `NtQuerySystemInformation` call plus one line
 calls so the steady state allocates only the image-name strings. At the default 1 Hz that is ~0.24 % of one core, well
 inside the < 1 % budget, and the figure is reproduced by
 `NtProcessSourceTests.Snapshot_PollCost_IsReportedForTheBudgetNote` rather than being a claim.
+
+The sensor join (2026-08-28) adds **no allocation to the tick path**: `InstanceExtras` is an 80-byte struct passed
+by `in`/`out`, the GPU readings live in one dictionary reused and cleared every two seconds, and the take methods
+return structs. Both numbers are pinned by tests —
+`SnapshotBuilderJoinTests.InstanceExtras_Size_IsWhatTheJoinBudgetWasCalculatedFrom` and
+`Build_WithASensorSource_AllocatesNoMoreThanWithoutOne`. Per-instance memory is one `DiskAccumulator` (24 B) and
+one `NetAccumulator` (280 B measured, once its dictionaries stopped being pre-sized to the endpoint cap — see
+`24_ADR.md` §Findings), so three hundred network-active processes cost about 82 KB rather than the ~75 MB the
+pre-sized version would have.
 
 **Where the budget actually binds.** S1-lite (2026-08-23) measured ~75 MB private working set for the two sessions
 alone, with handlers that only increment counters, and 0.03 % CPU. Against a 100 MB budget that leaves roughly
