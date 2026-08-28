@@ -38,9 +38,15 @@ public sealed class NetAccumulator
     /// <summary>The key used for everything that overflowed the cap.</summary>
     public static EndpointKey Overflow { get; } = new(NetworkProtocol.None, "(other)", 0);
 
-    private readonly Dictionary<EndpointKey, EndpointTotals> _endpoints = new(MaxEndpointsPerApp);
+    // Deliberately not pre-sized to MaxEndpointsPerApp. The cap is a ceiling on what may be tracked, not a
+    // prediction of what will be: one accumulator exists per network-active instance, and two dictionaries
+    // sized for 2 000 entries cost about 250 KB each time - committed on a TraceEvent thread at the first
+    // packet, in a process with roughly 20 MB of headroom for every collector structure combined. Three
+    // hundred talkative processes would have been ~75 MB for capacity nearly all of them never use.
+    // The cap itself lives in AddEndpoint, where it belongs, and is unaffected by this.
+    private readonly Dictionary<EndpointKey, EndpointTotals> _endpoints = [];
     private readonly LinkedList<EndpointKey> _recency = new();
-    private readonly Dictionary<EndpointKey, LinkedListNode<EndpointKey>> _nodes = new(MaxEndpointsPerApp);
+    private readonly Dictionary<EndpointKey, LinkedListNode<EndpointKey>> _nodes = [];
 
     /// <summary>Non-loopback payload bytes received.</summary>
     public long InBytes { get; private set; }
