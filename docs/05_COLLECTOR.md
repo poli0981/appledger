@@ -65,8 +65,10 @@ user.EnableProvider("Microsoft-Windows-DNS-Client", TraceEventLevel.Informationa
 FileIO is the only noisy keyword (thousands of events/s during large copies). Policy:
 - Default: 10 s window every 5 min (`kernel.EnableKernelProvider(current | FileIO | FileIOInit)` then revert). The
   keyword change is an `EnableTrace` call on the live session — no session restart.
-- Disk tab open for an app: continuous, max 60 s, then back to periodic (UI sends `SamplingHint{disk:true}` every 30 s
-  while the tab is visible; absence of hints ends the window).
+- Disk tab open for an app: continuous, max 60 s, then back to periodic. The UI sends `SamplingHint{disk:true}`
+  every **30 s** while the tab is visible and each hint holds the window open for **45 s** — the hold is longer than
+  the resend interval on purpose, so a hint arriving a little late renews an open window instead of racing its
+  expiry. Absence of hints ends the window.
 - During a window, events are aggregated per `(pid, directory)` into `DirectoryActivity{reads, writes, bytes, lastWrite}`;
   file-level top lists keep at most 50 entries per app (LRU). Nothing per-file is persisted except top-20 "largest
   recently written" per app per day.
@@ -82,11 +84,42 @@ FileIO is the only noisy keyword (thousands of events/s during large copies). Po
 3. Maps to `app_id` via `IdentityResolver` cache; sums per app; computes `procs`.
 4. Publishes `AppSnapshot[]` (sorted by `app_id`) to: the live channel (bounded 10, drop-oldest), the **5-min ring**
    (300 × apps ≈ 5.5 MB for 100 apps), and `Rollup1m`'s minute buffer.
-5. Self-measures: own CPU time and private WS → `Health`.
+5. Exposes the quiet losses — unattributed instances, unattributed events, handler errors, dropped live ticks, late
+   samples, DNS evictions — as one health snapshot, built on demand at the `HealthTick` cadence rather than per tick.
+
+**Process self-measurement belongs to the host, not here.** `HealthTick` carries `agentCpuPct` and `agentWs`, but
+those are facts about the process hosting the collector, not about the collector — in Lite mode the same library runs
+inside a WPF UI whose working set says nothing about collection cost. The Agent merges its own reading into the IPC
+payload. An earlier draft of step 5 put this in `SnapshotBuilder`.
+
+**The window boundary is a take, not a reset.** Step 2 reads each instance's ETW totals and zeroes them in the same
+operation (under `NetAccumulator`'s own lock; `Interlocked.Exchange` for the disk fields), so there is no gap between
+"read" and "clear" for an event to fall into. A bulk `ResetWindow()` after the read would have exactly that gap. The
+one place `ResetWindow()` still belongs is a re-baselined tick, where the whole window is deliberately discarded —
+otherwise eight hours of sleep arrive as one second of traffic.
+
+Two consequences worth stating because they will otherwise be read as bugs:
+
+- **Per-second `net_*`/`disk_*` are smeared by up to a second.** ETW real-time delivery is not synchronized to our
+  wall clock, so an event can land in the tick after the one it happened in. Nothing is lost or double-counted, and
+  the 1-minute rollup is exact except at minute boundaries. The live chart is the only place it shows.
+- **A process ETW sees before the poller does is unattributed for at most one poll interval**, counted in
+  `UnattributedEvents` rather than guessed at. Seeding the PID map from ETW `ProcessStart` would close that window
+  but opens a worse one: ETW gives an event timestamp, not `SYSTEM_PROCESS_INFORMATION.CreateTime`, and a key that
+  differs by one tick is a *second* accumulator for the same instance, which the poller-keyed read would then miss
+  entirely. Deferred behind a spike.
 
 Per-endpoint network accumulation (`NetAccumulator.Endpoints: Dictionary<(proto, daddr, dport), (in, out, first, last)>`)
 is capped at 2 000 endpoints per app (LRU); overflow aggregates into `(other)`. Hostnames are attached at rollup time
-via the DNS map, and policy (`12`) decides what is persisted.
+via the DNS map, and policy (`12`) decides what is persisted. **The cap is enforced on the add path only — the
+dictionaries must not be pre-sized to it.** One accumulator exists per network-active instance, so pre-sizing costs
+~250 KB each and is allocated on a TraceEvent thread at the first packet (`24_ADR.md` §Findings, 2026-08-28).
+
+**GPU is carried forward across the off-second.** The poller runs at 2 s and snapshots at 1 s, so each reading is
+used twice. That is unbiased in the rollup, which divides by the sample count: 30 readings appearing twice over
+60 samples average to the mean of the readings. Zeroing the off-second instead would report exactly half. A reading
+older than three poll intervals is dropped rather than carried, so the idle profile — which stops GPU polling
+altogether — stops charting rather than freezing on a stale value.
 
 ## Rollup math (Core, pure, golden-tested)
 
@@ -104,11 +137,12 @@ Percent values are stored as `REAL` 0–100 with one decimal; bytes as `INTEGER`
 | Poller interval | 1 s (2 s when no UI connected and no app is "watched") | halves idle cost |
 | GPU wildcard expansion | every 10 s | PDH cost |
 | FileIO window | 10 s / 5 min | noisiest keyword |
+| Connection table | sampled only while a `connections` subscription is open | four table reads per sample with no reader is pure cost; the sensor still starts, so its health is reported |
 | ESTATS | only for the app in view | per-connection cost, admin |
 | DNS map size | 10 000 ip→name entries, LRU | memory |
 | Endpoint map | 2 000 per app | memory |
-| Ring window | 300 s × live apps (1 min when idle) | measured: `AppSample` is 184 B, so 5.5 MB / 100 apps |
-| Idle detection | no UI for 10 min → `Idle` profile (poller 2 s, no GPU polling, ring keeps 15 min) | budget |
+| Ring window | 300 s × live apps, shrunk to `IdleRingWindow` (60 s) when idle | measured: `AppSample` is 184 B, so 5.5 MB / 100 apps, and 1.1 MB once idle |
+| Idle detection | no UI for 10 min → `Idle` profile (poller 2 s, no GPU polling, ring shrinks to 60 s) | budget |
 
 The S1 harness (`spikes/S1.EtwBudget`) hosts this library with the real sessions and logs its own CPU/RSS every 10 s.
 Budget violations in S1 block feature work (`20_SPIKES.md`).
@@ -139,4 +173,9 @@ and the DB cache together, and re-measure with S1 rather than assuming the CPU h
 ## Lite profile
 
 `CollectorOptions.Privilege = Standard`: `EtwHub` not constructed; `ProcessPoller` filters to own user; enrichment
-skips token queries on foreign processes; `Rollup*` disabled; ring kept (15 min) so the live charts still work.
+skips token queries on foreign processes; `Rollup*` disabled; ring kept (60 s) so the live charts still work.
+
+An earlier draft of this section said 15 minutes. That number predates the measurement: an `AppSample` is 184 B,
+so 15 minutes of 100 apps is 16.5 MB held by a UI that has no history to fall back on and draws 60-second
+sparklines. `CollectorOptions.Lite` therefore sets `RingWindow` to one minute, which is what the UI actually
+reads, and the code is the authority here.

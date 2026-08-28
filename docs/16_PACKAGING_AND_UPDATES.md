@@ -32,8 +32,9 @@ in `README` and also leave a `cleanup.txt` in the data root with the manual comm
 
 ## Scheduled Task (`AppLedger Agent`)
 
-Created by `AppLedger.Agent.exe --install-task` (elevated) using `schtasks /Create /TN "AppLedger Agent" /XML <tmp> /F`
-then `schtasks /Run /TN "AppLedger Agent"`. XML (user id and paths substituted at runtime):
+Created by `AppLedger.Agent.exe --install-task` (elevated) using
+`schtasks /Create /TN "AppLedger Agent" /XML "<DataRoot>\task\AppLedger Agent.xml" /F` then
+`schtasks /Run /TN "AppLedger Agent"`. XML (user id and paths substituted at runtime):
 
 ```xml
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -64,6 +65,19 @@ then `schtasks /Run /TN "AppLedger Agent"`. XML (user id and paths substituted a
 
 `Priority 7` = below normal (the Agent also sets its own process priority to `BelowNormal` and scanner threads lower).
 `schtasks /Run` and `/End` work without elevation for the task owner; `/Create` and `/Delete` need elevation.
+
+Three things about writing this file are load-bearing, and each fails quietly rather than loudly:
+
+- **Encoding is UTF-16.** `schtasks /XML` rejects UTF-8 — including UTF-8 with a BOM. A UTF-8 file produces an
+  unhelpful "The task XML is malformed" against XML that is, in fact, perfectly well-formed.
+- **`{{AGENT_EXE}}` is `%LOCALAPPDATA%\AppLedger\current\AppLedger.Agent.exe`, computed, not observed.**
+  `--install-task` runs from wherever the UI launched it, so `Environment.ProcessPath` may point at a
+  version-stamped Velopack folder. Baking that into the task makes it work today and fail after the first update,
+  which is exactly the failure the stable `current\` folder exists to prevent.
+- **`{{USER}}` and `{{USER_SID}}` are not interchangeable.** The `LogonTrigger` takes an account name
+  (`DOMAIN\user`, from `WindowsIdentity.GetCurrent().Name`) and the `Principal` takes the SID string
+  (`WindowsIdentity.GetCurrent().User`). Task Scheduler accepts several spellings in each slot, which is precisely
+  why the wrong one registers cleanly and then never fires.
 
 ## Agent CLI
 

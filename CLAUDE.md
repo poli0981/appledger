@@ -63,9 +63,14 @@ spikes/                      S1..S8 console harnesses (docs/20_SPIKES.md) — ne
 docs/  legal/  .github/
 ```
 
-Dependency direction: `App → Ipc, Core` · `Agent → Collector, Infrastructure, Ipc, Core` · `Collector → Core`
-(+ Infrastructure adapters injected) · `Infrastructure → Core` · `Core → nothing`. A reference from Core to anything
-Windows-specific is a review-blocking bug.
+Dependency direction: `App → Ipc, Core, Collector, Infrastructure` · `Agent → Collector, Infrastructure, Ipc, Core` ·
+`Collector → Core` (+ Infrastructure adapters injected) · `Infrastructure → Core` · `Core → nothing`. A reference
+from Core to anything Windows-specific is a review-blocking bug.
+
+The App's two extra edges are not a leak and are not optional: Lite mode hosts `AppLedger.Collector` in-process
+(`docs/01_ARCHITECTURE.md` §Lite mode), and the UI reads history straight out of SQLite rather than over the pipe
+(`docs/07_IPC.md` §opening), which needs the Infrastructure reader. What the App must never do is *write* history —
+that stays the Agent's alone (`docs/06_DATA_MODEL.md` §Ownership).
 
 ## Conventions
 

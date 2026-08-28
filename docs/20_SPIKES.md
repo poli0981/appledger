@@ -66,14 +66,28 @@ cost an upper bound.
 
 ## S1 — Agent budget (`spikes/S1.EtwBudget`)
 
-- **Harness:** hosts `AppLedger.Collector` with `Privilege=Elevated`, the real `AppLedger-Kernel` + `AppLedger-User`
-  sessions, FileIO sampling windows on, rollups into a temp SQLite, no pipe clients. Logs its own CPU time, private WS,
-  `EventsLost` per session, handler errors and GC counts every 10 s to CSV.
-- **Procedure:** `dotnet run -c Release --project spikes/S1.EtwBudget -- --hours 48 --out s1.csv` on the dev box,
-  elevated. During the run: ≥ 2 h of a game (one with EAC), a 1 GB file copy + a Steam download, a browser session with
-  ~200 tabs opened over time, one sleep/resume, one 10-min idle window. Repeat the first 6 h on the Windows 10 VM.
-  Build for ARM64 once to confirm TraceEvent's native bits load (`KernelTraceControl.dll`) — if they don't, ARM64 ships
-  Lite-only and ADR records it.
+S1 is measured **twice**, on purpose. The two runs answer different questions and their difference is itself a
+number worth having — it is the cost of the pipe server, the identity resolver and the real database, which the
+spike deliberately does not carry.
+
+- **Leg A — the pipeline alone (`spikes/S1.EtwBudget --hours`).** Hosts `AppLedger.Collector` with
+  `Privilege=Elevated`, the real `AppLedger-Kernel` + `AppLedger-User` sessions, FileIO sampling windows on, rollups
+  into a temp SQLite, **no pipe server and no UI**. Logs its own CPU time, private WS, `EventsLost` per session,
+  handler errors and GC counts every **10 s** to CSV. This is the isolation run: if it fails, the fault is in the
+  collector, not in anything the Agent adds.
+- **Leg B — the Agent that actually ships (`AppLedger.Agent.exe --console`).** The real composition root, the pipe
+  server, Serilog, the catalog and the real database. No extra instrumentation and **no measurement-only CLI flag**:
+  the Agent already self-measures and writes one `health_minutes` row per minute (`15_LOGGING.md` §Agent
+  self-watch), so leg B is read back with a SQL query. Measuring through the mechanism that ships is the point —
+  a separate measuring path can be right about a build that is wrong.
+  S1's pass criteria are 5-minute averages, so per-minute resolution is sufficient.
+- **Procedure:** both legs 48 h on the dev box, elevated. During each run: ≥ 2 h of a game (one with EAC), a 1 GB
+  file copy + a Steam download, a browser session with ~200 tabs opened over time, one sleep/resume, one 10-min idle
+  window. Repeat the first 6 h of leg B on the Windows 10 VM. Build for ARM64 once to confirm TraceEvent's native
+  bits load (`KernelTraceControl.dll`) — if they don't, ARM64 ships Lite-only and ADR records it.
+- **What leg B settles that leg A cannot:** the Agent's SQLite `cache_size`. `06_DATA_MODEL.md` sets it to
+  `-32000` (32 MB) and marks the value provisional, because S1-lite measured a ~75 MB floor before any storage
+  existed. Leg B is where that pragma stops being an assumption.
 - **Pass:** idle (no UI, idle profile) < 1 % CPU 5-min average and < 100 MB private WS at hour 24 and hour 48; under
   load < 3 % CPU; `EventsLost = 0` for Network/DiskIO/Process at normal load; lost events during the 1 GB copy only in
   FileIO (allowed, flagged). No handler exceptions. Temp DB growth consistent with S5's model.
