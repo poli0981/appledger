@@ -203,7 +203,7 @@ spike deliberately does not carry.
 | Spike | Date | Box | Result | Numbers / link |
 |---|---|---|---|---|
 | S1-lite | 2026-08-23 | i7-14700KF (20C/28T), 32 GB, Win 11 Insider 29648, x64 | **PASS** | 45 min. Peak 5-min CPU **0.03 %** (2.4 s CPU total); private WS **79.7 MB** peak, +0.6 MB drift after the first 10 min; `EventsLost` **0/0**; 0 handler errors. 7.72 M network, 167 k disk, 40.6 k image, 11.7 k DNS, 1 649 process events; sustained 12.2 k network ev/s in the busiest 5 min, 19.6 k ev/s peak. See the Result note above. |
-| S1 | — | — | not run | |
+| S1 | — | — | **harness ready, runs pending** | Both legs are runnable as of 2026-08-28: leg A is `spikes/S1.EtwBudget --hours 48`, leg B is `AppLedger.Agent.exe --console` read back from `health_minutes`. `tools/s1-report.py` renders either against the criteria above. Run sheet: `tests/MANUAL_CHECKLIST.md` §S1. This is the last open item of v0.2. |
 | S2 | — | — | not run | |
 | S3 | — | — | not run | |
 | S4 | — | — | not run | |
