@@ -48,8 +48,11 @@ security boundary — see `11_SAFETY_POLICY.md` §Privilege boundary. Service mo
 ## Elevation strategy
 
 1. **Onboarding (one UAC prompt):** the UI launches `AppLedger.Agent.exe --install-task` via `ShellExecute` with the
-   `runas` verb. The elevated instance writes a task XML to `%TEMP%` and runs `schtasks /Create /TN "AppLedger Agent" /XML … /F`,
-   then starts the task. Task definition: `16_PACKAGING_AND_UPDATES.md` §Scheduled Task.
+   `runas` verb. The elevated instance writes a task XML to `DataRoot\task\AppLedger Agent.xml` and runs
+   `schtasks /Create /TN "AppLedger Agent" /XML … /F`, then starts the task. Task definition:
+   `16_PACKAGING_AND_UPDATES.md` §Scheduled Task. (`%TEMP%`, which an earlier draft named, is outside `DataRoot`
+   and so outside the single write root of `11_SAFETY_POLICY.md`. Keeping the file under `DataRoot` also leaves the
+   exact XML that was submitted, which is the first thing worth looking at when a task fails to register.)
 2. **Every logon:** Task Scheduler starts `AppLedger.Agent.exe --serve` as the interactive user with highest privileges.
    The Agent acquires a named mutex `Global\AppLedger.Agent` (second instance exits), opens the DB, starts the collector,
    then the pipe server.

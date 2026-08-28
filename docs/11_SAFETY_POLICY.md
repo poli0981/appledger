@@ -78,7 +78,9 @@ Build is x64/ARM64 only, so `System32` never silently redirects to `SysWOW64`.
 - The Agent binary lives in the Velopack `current\` folder (user-writable). Anyone who can replace it already runs as the
   user; the task does not grant cross-user access. A machine-wide install (v2) would close this by moving the binary to
   `Program Files` and the task to a `LocalService`/service model.
-- The pipe is `CurrentUserOnly` and rejects remote clients. No TCP listener exists anywhere in AppLedger.
+- The pipe's DACL grants only the current user and `BUILTIN\Administrators`, carries a Medium mandatory label so the
+  unelevated UI can connect at all, rejects remote clients, and both ends verify the peer's canonical image path
+  (`07_IPC.md` §Transport, `24_ADR.md` ADR-17). No TCP listener exists anywhere in AppLedger.
 - The Agent never loads plugins, scripts, or code from the data folder. The catalog is data (JSON), verified by signature,
   parsed with a strict schema (unknown fields rejected), size-capped at 4 MB.
 

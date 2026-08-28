@@ -27,8 +27,10 @@ Serilog in both processes. Logs are diagnostics for the user and for bug reports
 - `PathRedactor.ToClass(path)` → `<install-root>\…\<ext>` / `<userprofile>\…` / `<windows>` / `<drive>\…` (keeps depth and extension, drops names).
 - `HostRedactor.ToClass(host)` → `<etld1>` or `<ip-v4>`/`<ip-v6>` (never the value) at Information; the value at Debug.
 - Command lines, SIDs, user names: never at ≥ Information (log `{HasCommandLine: true, Length: n}` instead).
-- A unit test scans log templates in Infrastructure/Collector for forbidden property names (`Path`, `Host`, `CommandLine`,
-  `User`) outside `Debug` calls.
+- A unit test scans log templates in Infrastructure, Collector, **Agent and Ipc** for forbidden property names
+  (`Path`, `Host`, `CommandLine`, `User`) outside `Debug` calls. The last two matter most: `AppLedger.Agent.PipeServer`
+  is a named source context below, and the pipe is the one place where paths and hostnames are handled *because a
+  user asked to see them* — which is exactly the situation in which logging them looks reasonable.
 
 ## Structured properties (conventions)
 
@@ -44,5 +46,13 @@ numbers, DB size and row counts per table, catalog version, last 20 Warning+ lin
 
 ## Agent self-watch
 
-The Agent logs its own CPU/WS every 10 min at Information and writes `health_minutes`; exceeding budget for 10 minutes
-logs a Warning once per hour (no log spam).
+Health has three cadences, and they are three different things rather than a disagreement between documents:
+
+| Cadence | Where | Why |
+|---|---|---|
+| 10 s | `HealthTick` over the pipe (`07_IPC.md`) | live, for the `AgentHealthStrip`; nothing is persisted |
+| 1 min | one `health_minutes` row (`06_DATA_MODEL.md`) | the durable record — this is what S1 reads back after a 48-hour run |
+| 10 min | one Information line in `agent-.log` | a human-readable trail that survives a purge of the database |
+
+Exceeding budget for 10 consecutive minutes logs a Warning **once per hour** (no log spam), independently of the
+10-minute Information line.

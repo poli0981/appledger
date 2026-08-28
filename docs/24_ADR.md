@@ -150,6 +150,34 @@ to the doc that was fixed.
   AnyCPU. A new project that forgets its `Platforms` or its solution mapping falls back to AnyCPU and breaks the
   Infrastructure build loudly, which is the point.
 
+## ADR-17 — The pipe is secured by an explicit DACL plus a Medium integrity label, not by `CurrentUserOnly`
+
+- **Context:** ADR-7 specified "DACL to the owning user + Administrators, integrity label Medium, both sides verify
+  the peer executable path". `07_IPC.md` and `11_SAFETY_POLICY.md` had since been rewritten around
+  `PipeOptions.CurrentUserOnly`, described there as "sufficient and simpler than a hand-built DACL". The two are not
+  two wordings of one decision — they are mutually exclusive, since `CurrentUserOnly` grants the current user alone
+  and so cannot carry an Administrators ACE.
+- **Decision:** ADR-7 stands. The Agent creates the pipe with `NamedPipeServerStreamAcl.Create` and an explicit
+  `PipeSecurity`: `FullControl` for the user SID and `BUILTIN\Administrators`, plus a mandatory label of **Medium**
+  integrity. The client connects without `CurrentUserOnly`. Squatting is defended against by verifying the peer's
+  canonical image path in both directions (`GetNamedPipeClientProcessId` / `GetNamedPipeServerProcessId` +
+  `QueryFullProcessImageName`), which `NativeMethods.txt` has listed since v0.1 under "pipes (peer verification)".
+- **Why `CurrentUserOnly` is not merely redundant but wrong here.** Two independent reasons, both specific to a
+  High-IL server talking to a Medium-IL client:
+  1. **Owner mismatch.** An elevated token's default owner is `BUILTIN\Administrators`, so the pipe an elevated
+     process creates is owned by that group. The client-side half of `CurrentUserOnly` compares the pipe's owner
+     with `WindowsIdentity.GetCurrent().Owner`, which for the Medium-IL UI is the user SID. They differ, and the
+     connect fails.
+  2. **No mandatory label.** An object created by a High-IL process carries a High label, and the no-write-up
+     policy denies a Medium-IL process the write access that connecting to a pipe requires. `CurrentUserOnly` sets
+     a DACL; it does not touch the SACL.
+- **Consequences:** the ACL types live in `System.IO.Pipes.AccessControl`, which ships in the .NET 10 shared
+  framework — no package pin, no lock-file churn — but every member is `[SupportedOSPlatform("windows")]` and
+  `AppLedger.Ipc` targets `net10.0`, so the factory and the peer check belong in `AppLedger.Infrastructure` and
+  `Ipc` only ever sees a connected `Stream`. Because neither failure mode can be reproduced from an unelevated
+  test run, this is covered by a `Category=Admin` test (`19_TESTING.md` §Pipe security) rather than by CI, and it
+  is the assertion an elevated round trip exists to settle.
+
 ## Findings (append as discovered)
 
 | Date | Finding | Doc fixed |
@@ -187,3 +215,6 @@ to the doc that was fixed.
 | 2026-08-27 | Kernel `TcpIp*`/`UdpIp*` payloads expose their fields in **lower case** (`size`, `saddr`, `daddr`, `sport`, `dport`, `connid`) while `DiskIOTraceData` uses PascalCase (`TransferSize`, `DiskNumber`). Neither appears in the package's XML documentation, so both were confirmed by reflection before any handler was written. | `Infrastructure/Etw/EtwHub.cs` |
 | 2026-08-27 | `TraceEventSession.Source.Process()` throws whenever the session ends underneath it - `logman stop`, another instance reclaiming the name, sleep mid-buffer - and it runs on a background thread, where an exception is unhandled **by definition**. The first real run of the `Category=Admin` suite did not fail a test, it **killed the test host**. The loop is now guarded the same way handlers already were (`docs/05` Failure handling), and `Stop` calls `StopProcessing` before `Dispose` so the ordinary path produces no exception at all. | `Infrastructure/Etw/EtwHub.cs` |
 | 2026-08-27 | The ETW guard above was only half a fix. `Process()` also **returns normally** when the session is stopped cleanly - `logman stop`, another instance reclaiming the name - so catching only the throw left the hub reporting `Running` forever while collecting nothing. An Agent that looks healthy and silently records no network or disk bytes is worse than one that crashes, because a crash is visible. Any exit from the loop now marks the sensor unavailable, and a generation counter tells our own shutdown apart from a session dying under us. | `Infrastructure/Etw/EtwHub.cs` |
+| 2026-08-28 | `NetAccumulator` pre-sizes **two** dictionaries to `MaxEndpointsPerApp` (2 000) in its field initializers, and one accumulator exists per network-active `(pid, createTime)`. That is roughly **250 KB per instance** committed on the first packet, on a TraceEvent thread - about 75 MB for 300 active processes, against the ~20 MB S1-lite leaves for the entire collector. Nothing constructs a `NetAccumulator` in production yet, so the cost has never been paid; wiring the sensors into the snapshot is precisely what starts paying it. Capacities dropped to the default and grown on demand; the 2 000 cap stays enforced where it belongs, in the add path. | `Collector/Accumulators/NetAccumulator.cs`, `docs/05` Budget |
+| 2026-08-28 | `EventsLost` can go **down**. It is the sum of two sessions' counters and a session that restarts starts again from zero, so `Degraded` cannot be derived from "value differs from last time" - only an *increase* is loss, and a decrease must re-baseline silently. Deriving it from inequality would hatch every chart after any session restart. | `docs/05` Failure handling |
+| 2026-08-28 | Carrying the 2-second GPU reading forward onto the off-second is **unbiased** in the minute rollup, not double-counted: `Rollup.FromSamples` divides by `samples.Count`, so 30 readings each appearing twice give `2 x sum / 60`, which is the mean of the readings. Zeroing the off-second instead yields exactly **half**. The intuition that carry-forward inflates the average is wrong, and it is the intuition that would have picked the biased option. | `docs/05` Accumulators |
