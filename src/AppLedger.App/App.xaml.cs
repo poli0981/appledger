@@ -48,13 +48,18 @@ public partial class App : Application
         services.AddSingleton<INavigationWindow, MainWindow>();
         services.AddSingleton<MainWindowViewModel>();
 
+        // The Agent over the pipe, or the collector in this process when none answers (docs/01 §Lite mode).
+        services.AddSingleton<IAgentClient>(_ => new AgentClient());
+
         // Every page named in MainWindow's TargetPageType must be registered here. A missing registration
         // throws at runtime the first time somebody clicks that rail item, not at build time - which is why
         // a navigation smoke test walks all of them (docs/22 §Gotchas, docs/19 §UI).
+        // Pages transient, but the two view-models holding live state are singletons: they subscribe to the
+        // client once, and their rows have to survive navigating away and back (docs/22 §Navigation).
         services.AddTransient<HomePage>();
-        services.AddTransient<HomeViewModel>();
+        services.AddSingleton<HomeViewModel>();
         services.AddTransient<AppsPage>();
-        services.AddTransient<AppsViewModel>();
+        services.AddSingleton<AppsViewModel>();
         services.AddTransient<InstalledPage>();
         services.AddTransient<InstalledViewModel>();
         services.AddTransient<AlertsPage>();

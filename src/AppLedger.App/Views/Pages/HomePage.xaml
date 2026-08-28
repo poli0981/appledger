@@ -8,5 +8,73 @@
 
     <StackPanel Margin="{StaticResource PageMargin}">
         <TextBlock Style="{StaticResource PageTitleStyle}" Text="{Binding ViewModel.Title, Mode=OneWay}" />
+
+        <!--
+            The Lite banner is an InfoBar rather than a custom coloured border, and it says what is missing
+            rather than that something failed: running without the Agent is a choice the user is allowed to
+            make, not an error (docs/08_UI.md §States, docs/01 §Lite mode).
+        -->
+        <ui:InfoBar
+            Title="{x:Static res:Strings.Lite_Banner_Title}"
+            Margin="{StaticResource CardMargin}"
+            IsClosable="False"
+            IsOpen="{Binding ViewModel.IsLite, Mode=OneWay}"
+            Message="{x:Static res:Strings.Lite_Banner_Body}"
+            Severity="Informational" />
+
+        <!--  Agent health strip: mode, cost, and one chip per sensor.  -->
+        <ui:Card Margin="{StaticResource CardMargin}">
+            <StackPanel>
+                <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
+                    <ui:TextBlock
+                        FontTypography="BodyStrong"
+                        Text="{Binding ViewModel.Mode, Mode=OneWay}" />
+                    <ui:TextBlock
+                        Margin="8,0,0,0"
+                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                        Text="{Binding ViewModel.AgentVersion, Mode=OneWay}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <ui:TextBlock Text="{x:Static res:Strings.Health_Cpu}" />
+                    <ui:TextBlock
+                        Margin="8,0,24,0"
+                        FontTypography="BodyStrong"
+                        Text="{Binding ViewModel.AgentCpuPct, Mode=OneWay, TargetNullValue={x:Static res:Strings.Value_NotAvailable}, StringFormat={}{0:0.00} %}" />
+
+                    <ui:TextBlock Text="{x:Static res:Strings.Health_Memory}" />
+                    <ui:TextBlock
+                        Margin="8,0,0,0"
+                        FontTypography="BodyStrong"
+                        Text="{Binding ViewModel.AgentWorkingSet, Mode=OneWay, TargetNullValue={x:Static res:Strings.Value_NotAvailable}, StringFormat={}{0:N0} B}" />
+                </StackPanel>
+            </StackPanel>
+        </ui:Card>
+
+        <ui:Card Margin="{StaticResource CardMargin}">
+            <StackPanel>
+                <ui:TextBlock
+                    Margin="0,0,0,8"
+                    FontTypography="BodyStrong"
+                    Text="{x:Static res:Strings.Health_Sensors}" />
+                <ItemsControl ItemsSource="{Binding ViewModel.Sensors, Mode=OneWay}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ui:Badge Margin="0,0,8,8" Appearance="Secondary">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name, Mode=OneWay}" />
+                                    <TextBlock Margin="6,0,0,0" Text="{Binding State, Mode=OneWay}" />
+                                </StackPanel>
+                            </ui:Badge>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ui:Card>
     </StackPanel>
 </Page>

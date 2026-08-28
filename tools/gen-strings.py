@@ -41,6 +41,37 @@ STRINGS = {
         None,
     ),
 
+    "Col_App": ("App", "Ứng dụng", "アプリ", None),
+    "Col_Procs": ("Procs", "Tiến trình", "プロセス", "Column header: live process count for the app."),
+    "Col_Cpu": ("CPU %", "CPU %", "CPU %", None),
+    "Col_Memory": ("Memory", "Bộ nhớ", "メモリ", "Private working set - what Task Manager calls Memory."),
+    "Col_Gpu": ("GPU %", "GPU %", "GPU %", None),
+    "Col_DiskRead": ("Disk R", "Đĩa đọc", "ディスク読取", None),
+    "Col_DiskWrite": ("Disk W", "Đĩa ghi", "ディスク書込", None),
+    "Col_NetIn": ("Net down", "Mạng xuống", "受信", None),
+    "Col_NetOut": ("Net up", "Mạng lên", "送信", None),
+
+    "Health_Mode_Connecting": ("Connecting", "Đang kết nối", "接続中", None),
+    "Health_Mode_Full": ("Full", "Đầy đủ", "フル", None),
+    "Health_Mode_Degraded": ("Degraded", "Suy giảm", "機能低下", None),
+    "Health_Mode_Lite": ("Lite", "Rút gọn", "ライト", None),
+    "Health_Cpu": ("Agent CPU", "CPU của Agent", "エージェント CPU", None),
+    "Health_Memory": ("Agent memory", "Bộ nhớ Agent", "エージェント メモリ", None),
+    "Health_Sensors": ("Sensors", "Cảm biến", "センサー", None),
+
+    "Lite_Banner_Title": ("Running without the Agent", "Đang chạy không có Agent", "エージェントなしで実行中", None),
+    "Lite_Banner_Body": (
+        "Network, disk and DNS figures need the background Agent, which runs with administrator rights. "
+        "Everything shown here comes from what a standard user can see.",
+        "Số liệu mạng, đĩa và DNS cần Agent nền chạy với quyền quản trị. "
+        "Mọi thứ hiển thị ở đây đến từ những gì một người dùng thường thấy được.",
+        "ネットワーク、ディスク、DNS の数値には管理者権限で動作するバックグラウンド エージェントが必要です。"
+        "ここに表示されているのは標準ユーザーが取得できる情報のみです。",
+        None),
+
+    "Value_NotAvailable": ("N/A", "Không có", "N/A",
+        "Shown where a sensor could not run - deliberately not a zero, which would claim we looked."),
+
     "Menu_File": ("_File", "_Tệp", "ファイル(_F)", None),
     "Menu_File_Exit": ("E_xit", "T_hoát", "終了(_X)", None),
     "Menu_View": ("_View", "_Xem", "表示(_V)", None),

@@ -98,6 +98,66 @@
   <data name="State_NoDataYet" xml:space="preserve">
     <value>Chưa có dữ liệu. Agent vừa bắt đầu thu thập.</value>
   </data>
+  <data name="Col_App" xml:space="preserve">
+    <value>Ứng dụng</value>
+  </data>
+  <data name="Col_Procs" xml:space="preserve">
+    <value>Tiến trình</value>
+    <comment>Column header: live process count for the app.</comment>
+  </data>
+  <data name="Col_Cpu" xml:space="preserve">
+    <value>CPU %</value>
+  </data>
+  <data name="Col_Memory" xml:space="preserve">
+    <value>Bộ nhớ</value>
+    <comment>Private working set - what Task Manager calls Memory.</comment>
+  </data>
+  <data name="Col_Gpu" xml:space="preserve">
+    <value>GPU %</value>
+  </data>
+  <data name="Col_DiskRead" xml:space="preserve">
+    <value>Đĩa đọc</value>
+  </data>
+  <data name="Col_DiskWrite" xml:space="preserve">
+    <value>Đĩa ghi</value>
+  </data>
+  <data name="Col_NetIn" xml:space="preserve">
+    <value>Mạng xuống</value>
+  </data>
+  <data name="Col_NetOut" xml:space="preserve">
+    <value>Mạng lên</value>
+  </data>
+  <data name="Health_Mode_Connecting" xml:space="preserve">
+    <value>Đang kết nối</value>
+  </data>
+  <data name="Health_Mode_Full" xml:space="preserve">
+    <value>Đầy đủ</value>
+  </data>
+  <data name="Health_Mode_Degraded" xml:space="preserve">
+    <value>Suy giảm</value>
+  </data>
+  <data name="Health_Mode_Lite" xml:space="preserve">
+    <value>Rút gọn</value>
+  </data>
+  <data name="Health_Cpu" xml:space="preserve">
+    <value>CPU của Agent</value>
+  </data>
+  <data name="Health_Memory" xml:space="preserve">
+    <value>Bộ nhớ Agent</value>
+  </data>
+  <data name="Health_Sensors" xml:space="preserve">
+    <value>Cảm biến</value>
+  </data>
+  <data name="Lite_Banner_Title" xml:space="preserve">
+    <value>Đang chạy không có Agent</value>
+  </data>
+  <data name="Lite_Banner_Body" xml:space="preserve">
+    <value>Số liệu mạng, đĩa và DNS cần Agent nền chạy với quyền quản trị. Mọi thứ hiển thị ở đây đến từ những gì một người dùng thường thấy được.</value>
+  </data>
+  <data name="Value_NotAvailable" xml:space="preserve">
+    <value>Không có</value>
+    <comment>Shown where a sensor could not run - deliberately not a zero, which would claim we looked.</comment>
+  </data>
   <data name="Menu_File" xml:space="preserve">
     <value>_Tệp</value>
   </data>

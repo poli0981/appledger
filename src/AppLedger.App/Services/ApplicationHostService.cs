@@ -26,11 +26,16 @@ public sealed class ApplicationHostService : IHostedService
     }
 
     /// <inheritdoc />
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
+        // Resolved before the window so the two data view-models exist and are subscribed before the first
+        // tick arrives; a tick raised with nobody listening is a second of data nothing ever draws.
+        _ = _services.GetService(typeof(ViewModels.HomeViewModel));
+        _ = _services.GetService(typeof(ViewModels.AppsViewModel));
+
         if (Application.Current.Windows.OfType<MainWindow>().Any())
         {
-            return Task.CompletedTask;
+            return;
         }
 
         var window = _services.GetService(typeof(INavigationWindow)) as INavigationWindow
@@ -42,9 +47,18 @@ public sealed class ApplicationHostService : IHostedService
         // on the first rail item keeps that a decision rather than an accident of ordering.
         window.Navigate(typeof(HomePage));
 
-        return Task.CompletedTask;
+        if (_services.GetService(typeof(IAgentClient)) is IAgentClient client)
+        {
+            await client.StartAsync(cancellationToken).ConfigureAwait(true);
+        }
     }
 
     /// <inheritdoc />
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_services.GetService(typeof(IAgentClient)) is IAgentClient client)
+        {
+            await client.DisposeAsync().ConfigureAwait(false);
+        }
+    }
 }

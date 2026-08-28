@@ -63,6 +63,63 @@ public static class Strings
     /// <summary>No data yet. The Agent has only just started collecting.</summary>
     public static string State_NoDataYet => Get(nameof(State_NoDataYet));
 
+    /// <summary>App</summary>
+    public static string Col_App => Get(nameof(Col_App));
+
+    /// <summary>Procs</summary>
+    public static string Col_Procs => Get(nameof(Col_Procs));
+
+    /// <summary>CPU %</summary>
+    public static string Col_Cpu => Get(nameof(Col_Cpu));
+
+    /// <summary>Memory</summary>
+    public static string Col_Memory => Get(nameof(Col_Memory));
+
+    /// <summary>GPU %</summary>
+    public static string Col_Gpu => Get(nameof(Col_Gpu));
+
+    /// <summary>Disk R</summary>
+    public static string Col_DiskRead => Get(nameof(Col_DiskRead));
+
+    /// <summary>Disk W</summary>
+    public static string Col_DiskWrite => Get(nameof(Col_DiskWrite));
+
+    /// <summary>Net down</summary>
+    public static string Col_NetIn => Get(nameof(Col_NetIn));
+
+    /// <summary>Net up</summary>
+    public static string Col_NetOut => Get(nameof(Col_NetOut));
+
+    /// <summary>Connecting</summary>
+    public static string Health_Mode_Connecting => Get(nameof(Health_Mode_Connecting));
+
+    /// <summary>Full</summary>
+    public static string Health_Mode_Full => Get(nameof(Health_Mode_Full));
+
+    /// <summary>Degraded</summary>
+    public static string Health_Mode_Degraded => Get(nameof(Health_Mode_Degraded));
+
+    /// <summary>Lite</summary>
+    public static string Health_Mode_Lite => Get(nameof(Health_Mode_Lite));
+
+    /// <summary>Agent CPU</summary>
+    public static string Health_Cpu => Get(nameof(Health_Cpu));
+
+    /// <summary>Agent memory</summary>
+    public static string Health_Memory => Get(nameof(Health_Memory));
+
+    /// <summary>Sensors</summary>
+    public static string Health_Sensors => Get(nameof(Health_Sensors));
+
+    /// <summary>Running without the Agent</summary>
+    public static string Lite_Banner_Title => Get(nameof(Lite_Banner_Title));
+
+    /// <summary>Network, disk and DNS figures need the background Agent, which runs with administrator rights. Everything shown here comes from what a standard user can see.</summary>
+    public static string Lite_Banner_Body => Get(nameof(Lite_Banner_Body));
+
+    /// <summary>N/A</summary>
+    public static string Value_NotAvailable => Get(nameof(Value_NotAvailable));
+
     /// <summary>_File</summary>
     public static string Menu_File => Get(nameof(Menu_File));
 
@@ -94,6 +151,25 @@ public static class Strings
         nameof(Page_Settings_Title),
         nameof(State_NotYetBuilt),
         nameof(State_NoDataYet),
+        nameof(Col_App),
+        nameof(Col_Procs),
+        nameof(Col_Cpu),
+        nameof(Col_Memory),
+        nameof(Col_Gpu),
+        nameof(Col_DiskRead),
+        nameof(Col_DiskWrite),
+        nameof(Col_NetIn),
+        nameof(Col_NetOut),
+        nameof(Health_Mode_Connecting),
+        nameof(Health_Mode_Full),
+        nameof(Health_Mode_Degraded),
+        nameof(Health_Mode_Lite),
+        nameof(Health_Cpu),
+        nameof(Health_Memory),
+        nameof(Health_Sensors),
+        nameof(Lite_Banner_Title),
+        nameof(Lite_Banner_Body),
+        nameof(Value_NotAvailable),
         nameof(Menu_File),
         nameof(Menu_File_Exit),
         nameof(Menu_View),
