@@ -1,0 +1,15 @@
+<Page
+    x:Class="AppLedger.App.Views.Pages.InstalledPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:res="clr-namespace:AppLedger.App.Resources"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="{Binding ViewModel.Title, Mode=OneWay}">
+
+    <StackPanel Margin="{StaticResource PageMargin}">
+        <TextBlock Style="{StaticResource PageTitleStyle}" Text="{Binding ViewModel.Title, Mode=OneWay}" />
+        <ui:Card Margin="{StaticResource CardMargin}">
+            <TextBlock Style="{StaticResource PageBodyStyle}" Text="{x:Static res:Strings.State_NotYetBuilt}" />
+        </ui:Card>
+    </StackPanel>
+</Page>

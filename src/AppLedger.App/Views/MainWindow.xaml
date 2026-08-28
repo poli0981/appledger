@@ -1,27 +1,95 @@
-<ui:FluentWindow x:Class="AppLedger.App.Views.MainWindow"
-                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="AppLedger"
-                 Width="1280"
-                 Height="800"
-                 MinWidth="960"
-                 MinHeight="600"
-                 ExtendsContentIntoTitleBar="True"
-                 WindowBackdropType="Mica"
-                 WindowCornerPreference="Round"
-                 WindowStartupLocation="CenterScreen">
-    <!--  TODO(kickoff): v0.2 replaces the placeholder body with ui:NavigationView + pages (docs/08_UI.md).  -->
+<ui:FluentWindow
+    x:Class="AppLedger.App.Views.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:pages="clr-namespace:AppLedger.App.Views.Pages"
+    xmlns:res="clr-namespace:AppLedger.App.Resources"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="{Binding ViewModel.Title, Mode=OneWay}"
+    Width="1280"
+    Height="800"
+    MinWidth="960"
+    MinHeight="600"
+    d:DataContext="{d:DesignInstance Type=local:MainWindow}"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:AppLedger.App.Views"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="Mica"
+    WindowCornerPreference="Round"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+
+    <!--  Background is deliberately not set: setting it kills Mica (docs/22_WPFUI_SYNTAX.md §Gotchas).  -->
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Grid.Row="0" Title="AppLedger" />
-        <ui:TextBlock Grid.Row="1"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center"
-                      FontTypography="Subtitle"
-                      Text="AppLedger shell arrives in v0.2." />
+
+        <ui:TitleBar
+            Grid.Row="0"
+            Title="{Binding ViewModel.Title, Mode=OneWay}"
+            Icon="{ui:SymbolIcon DataHistogram24}" />
+
+        <!--
+            The menu bar lives outside ui:TitleBar: the title bar's area is the window drag region, and a
+            Menu placed inside it swallows the clicks that move the window (docs/22 §Gotchas).
+        -->
+        <Menu Grid.Row="1" Margin="12,0,0,0" Background="Transparent">
+            <MenuItem Header="{x:Static res:Strings.Menu_File}">
+                <MenuItem Click="OnExitClicked" Header="{x:Static res:Strings.Menu_File_Exit}" />
+            </MenuItem>
+            <MenuItem Header="{x:Static res:Strings.Menu_View}" />
+            <MenuItem Header="{x:Static res:Strings.Menu_Help}">
+                <MenuItem Header="{x:Static res:Strings.Menu_Help_About}" />
+            </MenuItem>
+        </Menu>
+
+        <ui:NavigationView
+            x:Name="RootNavigation"
+            Grid.Row="2"
+            IsBackButtonVisible="Collapsed"
+            IsPaneToggleVisible="True"
+            OpenPaneLength="200"
+            PaneDisplayMode="Left">
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem
+                    Content="{x:Static res:Strings.Nav_Home}"
+                    Icon="{ui:SymbolIcon Home24}"
+                    TargetPageType="{x:Type pages:HomePage}" />
+                <ui:NavigationViewItem
+                    Content="{x:Static res:Strings.Nav_Apps}"
+                    Icon="{ui:SymbolIcon Apps24}"
+                    TargetPageType="{x:Type pages:AppsPage}" />
+                <ui:NavigationViewItem
+                    Content="{x:Static res:Strings.Nav_Installed}"
+                    Icon="{ui:SymbolIcon AppFolder24}"
+                    TargetPageType="{x:Type pages:InstalledPage}" />
+                <ui:NavigationViewItem
+                    Content="{x:Static res:Strings.Nav_Alerts}"
+                    Icon="{ui:SymbolIcon Alert24}"
+                    TargetPageType="{x:Type pages:AlertsPage}">
+                    <ui:NavigationViewItem.InfoBadge>
+                        <ui:InfoBadge Severity="Attention" Value="{Binding ViewModel.UnreadAlerts, Mode=OneWay}" />
+                    </ui:NavigationViewItem.InfoBadge>
+                </ui:NavigationViewItem>
+            </ui:NavigationView.MenuItems>
+            <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem
+                    Content="{x:Static res:Strings.Nav_Settings}"
+                    Icon="{ui:SymbolIcon Settings24}"
+                    TargetPageType="{x:Type pages:SettingsPage}" />
+            </ui:NavigationView.FooterMenuItems>
+        </ui:NavigationView>
+
+        <ui:ContentDialogHost x:Name="RootContentDialog" Grid.Row="2" />
+
+        <ui:SnackbarPresenter
+            x:Name="SnackbarPresenter"
+            Grid.Row="2"
+            VerticalAlignment="Bottom" />
     </Grid>
 </ui:FluentWindow>
