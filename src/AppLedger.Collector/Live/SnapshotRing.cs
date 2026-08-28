@@ -25,8 +25,8 @@ namespace AppLedger.Collector.Live;
 /// </remarks>
 public sealed class SnapshotRing
 {
-    private readonly IReadOnlyList<AppSample>[] _seconds;
     private readonly Lock _gate = new();
+    private IReadOnlyList<AppSample>[] _seconds;
     private int _next;
     private int _count;
 
@@ -115,6 +115,46 @@ public sealed class SnapshotRing
 
             result.Reverse();
             return result;
+        }
+    }
+
+    /// <summary>
+    /// Changes the window, keeping the most recent seconds that still fit.
+    /// </summary>
+    /// <remarks>
+    /// This is what makes the idle profile a memory saving rather than a label. Nobody is drawing sparklines
+    /// when no UI has been connected for ten minutes, and five minutes of a hundred apps is 5.5 MB out of the
+    /// ~20 MB the collector has in total (docs/05 §Budget controls). Shrinking to a minute gives four of them
+    /// back to the accumulators.
+    /// </remarks>
+    public void Resize(TimeSpan window)
+    {
+        var capacity = (int)window.TotalSeconds;
+        if (capacity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(window), window, "The ring must cover at least one second.");
+        }
+
+        lock (_gate)
+        {
+            if (capacity == _seconds.Length)
+            {
+                return;
+            }
+
+            var keep = System.Math.Min(_count, capacity);
+            var replacement = new IReadOnlyList<AppSample>[capacity];
+
+            // Oldest-first into the front of the new array, dropping whatever no longer fits from the front.
+            for (var i = 0; i < keep; i++)
+            {
+                var index = (_next - keep + i + (_seconds.Length * 2)) % _seconds.Length;
+                replacement[i] = _seconds[index];
+            }
+
+            _seconds = replacement;
+            _count = keep;
+            _next = keep % capacity;
         }
     }
 
