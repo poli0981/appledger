@@ -1,4 +1,5 @@
 using System.IO.Pipes;
+using System.Security.AccessControl;
 using System.Security.Principal;
 using AppLedger.Infrastructure.Ipc;
 using Shouldly;
@@ -58,16 +59,38 @@ public sealed class NamedPipeServerFactoryTests
         applied.ShouldContain("(ML;;NW;;;ME)");
     }
 
+    /// <summary>
+    /// The DACL grants this user and Administrators, and nobody else.
+    /// </summary>
+    /// <remarks>
+    /// Asserted through a parsed descriptor rather than by searching the SDDL text.
+    /// <c>ConvertSecurityDescriptorToStringSecurityDescriptor</c> is free to render a principal either as a
+    /// raw SID or as a two-letter alias, and which one it picks depends on the account — so a string search
+    /// for the current user's SID passes on a developer box and fails on a CI runner whose account happens
+    /// to have an alias. That is a test asserting a representation rather than a property.
+    /// </remarks>
     [Fact]
     public void Create_AppliesTheDaclToTheRealPipe()
     {
         using var server = NamedPipeServerFactory.Create(UniqueName(), maxInstances: 4);
 
         var applied = NamedPipeServerFactory.ReadAppliedSddl(server.SafePipeHandle);
-
         applied.ShouldNotBeNull();
-        applied.ShouldContain(WindowsIdentity.GetCurrent().User!.Value);
-        applied.ShouldContain("BA");
+
+        var descriptor = new RawSecurityDescriptor(applied);
+        descriptor.DiscretionaryAcl.ShouldNotBeNull();
+
+        var user = WindowsIdentity.GetCurrent().User!;
+        var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+
+        var granted = descriptor.DiscretionaryAcl!
+            .OfType<CommonAce>()
+            .Select(ace => ace.SecurityIdentifier)
+            .ToList();
+
+        granted.ShouldContain(user);
+        granted.ShouldContain(administrators);
+        granted.ShouldAllBe(sid => sid == user || sid == administrators);
     }
 
     /// <summary>The DACL must not lock out the process that created the pipe.</summary>
