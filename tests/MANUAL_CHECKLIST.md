@@ -32,6 +32,29 @@ exists precisely so this is diagnosable: a pipe carrying `(ML;;NW;;;ME)` is labe
 
 ---
 
+## The Scheduled Task
+
+**Covers:** `docs/16_PACKAGING_AND_UPDATES.md` §Scheduled Task, §Agent CLI.
+**Run whenever:** `Agent/Tasks/*` changes.
+
+`docs/19_TESTING.md` puts "timing of Task Scheduler / logon" in *What is deliberately not unit-tested*, and
+this is that. The XML is asserted by tests — every element, the account-name-versus-SID split, the UTF-16
+encoding, the `current\` path — but whether Task Scheduler *accepts* it, and whether the task actually fires
+at logon, only a real machine can say.
+
+- [ ] Elevated: `AppLedger.Agent.exe --install-task` → exits 0, and the task appears in Task Scheduler
+- [ ] Its action reads `…\AppLedger\current\AppLedger.Agent.exe --serve` — **not** a version-stamped folder
+- [ ] Unelevated: `AppLedger.Agent.exe --status` → exits 0, prints `task: Running` and a reachable agent
+- [ ] Log off and back on; the Agent is running again within a minute of the desktop appearing
+- [ ] Unelevated: `schtasks /Run /TN "AppLedger Agent"` and `/End` both work — the owner needs no elevation
+- [ ] Elevated: `AppLedger.Agent.exe --remove-task` → the running Agent acknowledges, then the task is gone
+- [ ] `--status` now exits 7
+
+If `/Create` is refused, the exact document that was submitted is at `%LOCALAPPDATA%\AppLedgerData\task\`.
+Encoding is the first thing to check: `schtasks` reports a UTF-8 file as malformed XML.
+
+---
+
 ## Release matrix
 
 From `docs/19_TESTING.md`. Every row is one machine.
