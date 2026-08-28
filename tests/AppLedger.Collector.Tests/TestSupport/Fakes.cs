@@ -1,3 +1,4 @@
+using AppLedger.Core.Collection;
 using AppLedger.Core.Identity;
 using AppLedger.Core.Policy;
 
@@ -75,5 +76,70 @@ internal sealed class FakeProcessEnricher : IProcessEnricher
         return _imagePaths.TryGetValue(key, out var path)
             ? new ProcessEnrichment { Attempted = true, ImagePath = path }
             : new ProcessEnrichment { Attempted = true };
+    }
+}
+
+/// <summary>
+/// An ETW source whose events are raised by the test rather than by a session, which is the whole point of
+/// the handler seam: the same code path runs against a live session, a recorded .etl and this
+/// (docs/19_TESTING.md §Layers).
+/// </summary>
+internal sealed class FakeEtwSource : IEtwSource
+{
+    public string Name => "EtwHub";
+
+    public SensorHealth Health { get; set; } = new(SensorState.Running);
+
+    public long EventsLost { get; set; }
+
+    public event Action<NetworkEvent>? Network;
+
+    public event Action<DiskIoEvent>? DiskIo;
+
+    public event Action<DnsEvent>? Dns;
+
+    public event Action<ImageLoadEvent>? ImageLoad;
+
+    public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    internal void Raise(in NetworkEvent e) => Network?.Invoke(e);
+
+    internal void Raise(in DiskIoEvent e) => DiskIo?.Invoke(e);
+
+    internal void Raise(in DnsEvent e) => Dns?.Invoke(e);
+
+    internal void RaiseImageLoad(in ImageLoadEvent e) => ImageLoad?.Invoke(e);
+}
+
+/// <summary>
+/// A GPU source returning whatever the test last set. Its health matters as much as its samples: a machine
+/// with no WDDM 2.x counters is a normal Tuesday, not a fault (docs/01 §Degraded modes).
+/// </summary>
+internal sealed class FakeGpuSource : IGpuSource
+{
+    private IReadOnlyList<GpuSample> _samples = [];
+
+    public string Name => "GpuPoller";
+
+    public SensorHealth Health { get; set; } = new(SensorState.Running);
+
+    internal int SampleCalls { get; private set; }
+
+    public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    public IReadOnlyList<GpuSample> Sample()
+    {
+        SampleCalls++;
+        return _samples;
+    }
+
+    internal FakeGpuSource Returning(params GpuSample[] samples)
+    {
+        _samples = samples;
+        return this;
     }
 }

@@ -4,6 +4,12 @@ using AppLedger.Core.Identity;
 
 namespace AppLedger.Collector.Accumulators;
 
+/// <summary>One window's real device I/O.</summary>
+/// <param name="ReadBytes">Bytes read from the device.</param>
+/// <param name="WriteBytes">Bytes written to the device.</param>
+/// <param name="Operations">Device operations, read and write together.</param>
+public readonly record struct DiskTotals(long ReadBytes, long WriteBytes, long Operations);
+
 /// <summary>Real device I/O for one process instance within the current window.</summary>
 public sealed class DiskAccumulator
 {
@@ -35,7 +41,20 @@ public sealed class DiskAccumulator
         Interlocked.Increment(ref _operations);
     }
 
-    /// <summary>Empties for the next window.</summary>
+    /// <summary>Reads the three totals and zeroes them, one field at a time.</summary>
+    /// <remarks>
+    /// Three exchanges are not one atomic operation, so an event landing between the first and the third can
+    /// have its bytes counted in this second and its operation count in the next. That is **one event, one
+    /// field, one second late** — never lost, never doubled. The alternative is a lock on a path that carries
+    /// thousands of events a second during a file copy, which is a poor trade for a one-event skew in a
+    /// counter the UI renders as "disk ops per second".
+    /// </remarks>
+    public DiskTotals Take() => new(
+        Interlocked.Exchange(ref _readBytes, 0),
+        Interlocked.Exchange(ref _writeBytes, 0),
+        Interlocked.Exchange(ref _operations, 0));
+
+    /// <summary>Empties for the next window without reading.</summary>
     public void Reset()
     {
         Interlocked.Exchange(ref _readBytes, 0);
@@ -96,6 +115,27 @@ public sealed class EtwAccumulators
 
     /// <summary>Device I/O totals for an instance, or null when it has produced none.</summary>
     public DiskAccumulator? DiskFor(ProcessKey key) => _disk.GetValueOrDefault(key);
+
+    /// <summary>
+    /// Reads and zeroes one instance's network totals under the same lock the handler takes, so the window
+    /// boundary has no gap for an event to fall through. Zero for an instance that has produced no traffic.
+    /// </summary>
+    public NetTotals TakeNetwork(ProcessKey key)
+    {
+        if (!_net.TryGetValue(key, out var accumulator))
+        {
+            return default;
+        }
+
+        lock (accumulator)
+        {
+            return accumulator.TakeTotals();
+        }
+    }
+
+    /// <summary>Reads and zeroes one instance's device I/O. Zero for an instance that has produced none.</summary>
+    public DiskTotals TakeDisk(ProcessKey key) =>
+        _disk.TryGetValue(key, out var accumulator) ? accumulator.Take() : default;
 
     /// <summary>Handles one network event. Never throws.</summary>
     public void OnNetwork(in NetworkEvent e)
@@ -167,9 +207,14 @@ public sealed class EtwAccumulators
     }
 
     /// <summary>
-    /// Empties every accumulator for the next window and forgets instances that produced nothing, so the
-    /// dictionaries stay bounded by what is actually running rather than by uptime.
+    /// Discards every accumulator's contents without reading them, endpoint breakdown included.
     /// </summary>
+    /// <remarks>
+    /// This is not the per-second path — that is <see cref="TakeNetwork"/> and <see cref="TakeDisk"/>, which
+    /// read and zero together. This is the *discard* path, for a tick whose interval cannot be trusted: after
+    /// a sleep or a clock step, whatever accumulated across the gap belongs to no second we can name, and
+    /// eight hours of traffic arriving as one second is worse than a hole (docs/05 §Failure handling).
+    /// </remarks>
     public void ResetWindow()
     {
         foreach (var (_, accumulator) in _net)

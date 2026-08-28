@@ -1,4 +1,6 @@
+using AppLedger.Collector.Accumulators;
 using AppLedger.Collector.Processes;
+using AppLedger.Collector.Snapshots;
 using AppLedger.Collector.Tests.TestSupport;
 using AppLedger.Core.Collection;
 using AppLedger.Core.Identity;
@@ -23,11 +25,11 @@ public sealed class CollectorHostTests
     private readonly ManualClock _clock = new();
     private readonly ScriptedProcessSource _source = new();
 
-    private CollectorHost Build(CollectorOptions? options = null)
+    private CollectorHost Build(CollectorOptions? options = null, SensorJoin? sensors = null)
     {
         var resolver = new FallbackIdentityResolver(_policy, new InstallRootHeuristic(FakePolicyGuard.Boundaries));
         var registry = new InstanceRegistry(_policy, _enricher, resolver);
-        return new CollectorHost(_source, registry, _clock, options, _repository);
+        return new CollectorHost(_source, registry, _clock, options, _repository, sensors);
     }
 
     private static RawProcessSample Sample(int pid, string imageName, long readBytes = 0) => new()
@@ -270,7 +272,10 @@ public sealed class CollectorHostTests
         await host.StartSensorsAsync();
 
         host.FailedSensors.ShouldBeEmpty();
-        host.SensorHealth.ShouldHaveSingleItem().State.ShouldBe(SensorState.Unavailable);
+
+        var report = host.Sensors.ShouldHaveSingleItem();
+        report.Name.ShouldBe("Gpu");
+        report.Health.State.ShouldBe(SensorState.Unavailable);
     }
 
     [Fact]
@@ -309,5 +314,205 @@ public sealed class CollectorHostTests
         var after = await host.TickAsync();
 
         after.ShouldHaveSingleItem().IoRead.ShouldBe(500);
+    }
+
+    // -- sensors -----------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// The end-to-end claim of the whole join, at the level where it can actually be wrong: ETW bytes
+    /// raised on the source reach the row that is written to history. Every layer below this passed while
+    /// those columns were permanently zero.
+    /// </summary>
+    [Fact]
+    public async Task TickAsync_EtwBytesForALiveInstance_ReachTheWrittenRow()
+    {
+        _enricher.WithImagePath(new ProcessKey(100, 1), ChromeExe);
+        var etw = new FakeEtwSource();
+        var host = Build(sensors: SensorJoin.Create(etw, gpu: null));
+
+        for (var i = 0; i < 130; i++)
+        {
+            _source.Then([Sample(100, "chrome.exe")]);
+            await host.TickAsync();
+            etw.Raise(new NetworkEvent(100, 1_000, NetworkDirection.Inbound, NetworkProtocol.Tcp, null, 443, 0));
+            etw.Raise(new DiskIoEvent(100, 4_096, IsWrite: true, DiskNumber: 0, 0));
+            _clock.Advance();
+        }
+
+        _repository.Rows.ShouldNotBeEmpty();
+
+        var row = _repository.Rows.First();
+        row.NetIn.ShouldBeGreaterThan(0);
+        row.DiskWrite.ShouldBeGreaterThan(0);
+    }
+
+    /// <summary>
+    /// Eight hours of sleep must not arrive as one second of traffic. The bytes that accumulated across the
+    /// gap belong to no second we can name, so the window is discarded with the tick.
+    /// </summary>
+    [Fact]
+    public async Task TickAsync_ClockJump_DoesNotChargeTheWholeGapToTheNextSecond()
+    {
+        _enricher.WithImagePath(new ProcessKey(100, 1), ChromeExe);
+        var etw = new FakeEtwSource();
+        var host = Build(sensors: SensorJoin.Create(etw, gpu: null));
+
+        await RunAsync(host, 5, _ => [Sample(100, "chrome.exe")]);
+
+        // Traffic that piled up while the machine was asleep.
+        etw.Raise(new NetworkEvent(100, 40_000_000_000, NetworkDirection.Inbound, NetworkProtocol.Tcp, null, 443, 0));
+
+        _clock.JumpWallClock(8 * 3600);
+        _source.Then([Sample(100, "chrome.exe")]);
+        (await host.TickAsync()).ShouldBeEmpty();
+        _clock.Advance();
+
+        _source.Then([Sample(100, "chrome.exe")]);
+        var after = await host.TickAsync();
+
+        after.ShouldHaveSingleItem().NetIn.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// The connection table is not part of <c>AppSample</c> and has no reader until the Network tab exists,
+    /// so sampling it at 1 Hz would be four table reads a second for nobody (docs/05 §Budget controls).
+    /// </summary>
+    [Fact]
+    public async Task TickAsync_ConnectionSource_IsNeverSampledOnTheTickPath()
+    {
+        _enricher.WithImagePath(new ProcessKey(100, 1), ChromeExe);
+        var connections = new CountingConnectionSource();
+        var host = Build();
+        host.AddSensor(connections);
+
+        await host.StartSensorsAsync();
+        await RunAsync(host, 10, _ => [Sample(100, "chrome.exe")]);
+
+        connections.SampleCalls.ShouldBe(0);
+        host.Sensors.ShouldContain(s => s.Name == "ConnectionPoller");
+    }
+
+    /// <summary>
+    /// The idle profile has to release something to be worth having. Five minutes of a hundred apps is
+    /// 5.5 MB of the roughly 20 the collector gets in total.
+    /// </summary>
+    [Fact]
+    public async Task TickAsync_GoingIdle_ShrinksTheRingToTheIdleWindow()
+    {
+        _enricher.WithImagePath(new ProcessKey(100, 1), ChromeExe);
+        var options = new CollectorOptions
+        {
+            RingWindow = TimeSpan.FromMinutes(5),
+            IdleRingWindow = TimeSpan.FromMinutes(1),
+            IdleAfter = TimeSpan.FromSeconds(3),
+        };
+
+        var host = Build(options);
+        host.Ring.Capacity.ShouldBe(300);
+
+        host.NoteUiActivity();
+        await RunAsync(host, 2, _ => [Sample(100, "chrome.exe")]);
+        host.IsIdle.ShouldBeFalse();
+        host.Ring.Capacity.ShouldBe(300);
+
+        // Nothing notes activity again, so the idle threshold passes.
+        await RunAsync(host, 5, _ => [Sample(100, "chrome.exe")]);
+
+        host.IsIdle.ShouldBeTrue();
+        host.Ring.Capacity.ShouldBe(60);
+    }
+
+    [Fact]
+    public async Task TickAsync_UiReturning_RestoresTheFullRing()
+    {
+        _enricher.WithImagePath(new ProcessKey(100, 1), ChromeExe);
+        var options = new CollectorOptions { IdleAfter = TimeSpan.FromSeconds(2) };
+        var host = Build(options);
+
+        await RunAsync(host, 3, _ => [Sample(100, "chrome.exe")]);
+        host.Ring.Capacity.ShouldBe((int)options.IdleRingWindow.TotalSeconds);
+
+        host.NoteUiActivity();
+        await RunAsync(host, 1, _ => [Sample(100, "chrome.exe")]);
+
+        host.IsIdle.ShouldBeFalse();
+        host.Ring.Capacity.ShouldBe((int)options.RingWindow.TotalSeconds);
+    }
+
+    /// <summary>
+    /// Every counter here measures a place where the collector knows it missed something, and each was
+    /// unreachable from outside the host until now — indistinguishable from a quiet machine.
+    /// </summary>
+    [Fact]
+    public async Task ReadHealth_ExposesEveryCounterThePipeServerNeeds()
+    {
+        _enricher.WithImagePath(new ProcessKey(100, 1), ChromeExe);
+        var etw = new FakeEtwSource();
+        var host = Build(new CollectorOptions { LiveChannelCapacity = 1 }, SensorJoin.Create(etw, gpu: null));
+        host.AddSensor(etw);
+        await host.StartSensorsAsync();
+
+        // An event for a PID the poller has never reported cannot be attributed, and is counted.
+        etw.Raise(new NetworkEvent(999, 10, NetworkDirection.Inbound, NetworkProtocol.Tcp, null, 443, 0));
+        await RunAsync(host, 20, _ => [Sample(100, "chrome.exe")]);
+
+        var health = host.ReadHealth();
+
+        health.LiveApps.ShouldBe(1);
+        health.LiveInstances.ShouldBe(1);
+        health.RingSeconds.ShouldBeGreaterThan(0);
+        health.LiveDropped.ShouldBeGreaterThan(0);
+        health.UnattributedEvents.ShouldBe(1);
+        health.CurrentInterval.ShouldBe(host.CurrentInterval);
+        health.Sensors.ShouldContain(s => s.Name == "EtwHub");
+        health.Degraded.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ReadHealth_UnavailableSensor_ReportsDegraded()
+    {
+        var host = Build();
+        host.AddSensor(new FakeSensor("Gpu", state: SensorState.Unavailable));
+        await host.StartSensorsAsync();
+
+        var health = host.ReadHealth();
+
+        health.Degraded.ShouldBeTrue();
+        health.Sensors.ShouldHaveSingleItem().Name.ShouldBe("Gpu");
+    }
+
+    /// <summary>Lite mode has no ETW at all, so the counters that come from it are zero, not missing.</summary>
+    [Fact]
+    public void ReadHealth_WithNoSensorJoin_StillReports()
+    {
+        var health = Build(CollectorOptions.Lite).ReadHealth();
+
+        health.UnattributedEvents.ShouldBe(0);
+        health.HandlerErrors.ShouldBe(0);
+        health.DnsEntries.ShouldBe(0);
+        health.Sensors.ShouldBeEmpty();
+    }
+
+    private sealed class CountingConnectionSource : IConnectionSource
+    {
+        public string Name => "ConnectionPoller";
+
+        public SensorHealth Health { get; private set; } = SensorHealth.Stopped;
+
+        internal int SampleCalls { get; private set; }
+
+        public Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            Health = new SensorHealth(SensorState.Running);
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public IReadOnlyList<ConnectionRow> Sample()
+        {
+            SampleCalls++;
+            return [];
+        }
     }
 }
