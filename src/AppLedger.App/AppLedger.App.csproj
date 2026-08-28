@@ -8,9 +8,16 @@
     <RootNamespace>AppLedger.App</RootNamespace>
     <AssemblyName>AppLedger</AssemblyName>
     <Platforms>x64;ARM64</Platforms>
-    <!-- TODO(kickoff): restore ApplicationIcon (Assets\icon.ico) when the shell lands in v0.2 -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- en is the source of truth for resx (docs/14_I18N.md); vi and ja are satellites. -->
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- The navigation smoke test asserts every page named in MainWindow.xaml is registered in the
+         container. A missing registration throws the first time a user clicks that rail item, not at build
+         time (docs/22_WPFUI_SYNTAX.md §Gotchas), so the test needs to see ConfigureServices. -->
+    <InternalsVisibleTo Include="AppLedger.App.Tests" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AppLedger.Core\AppLedger.Core.csproj" />
     <ProjectReference Include="..\AppLedger.Ipc\AppLedger.Ipc.csproj" />
@@ -30,9 +37,14 @@
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Update="Resources\Strings.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
+    <!-- The resx files are embedded as resources; the strongly-typed Strings class beside them is generated
+         by tools/gen-strings.py and committed.
+
+         Not the SDK's StronglyTypedFileName: written into obj it is produced during PrepareResources, after
+         the Compile items were evaluated, so a *clean* build generates it and never compiles it while a
+         second build succeeds - green locally, red on CI, which always builds clean. Written into the
+         project directory the SDK declined to produce it at all. A committed file that a script regenerates
+         and a test verifies is the version with no MSBuild ordering in it. docs/14_I18N.md. -->
+    <EmbeddedResource Update="Resources\Strings.resx" />
   </ItemGroup>
 </Project>

@@ -7,6 +7,12 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\Shared\TestPaths.cs" Link="TestPaths.cs" />
+    <Using Include="AppLedger.Testing" />
+    <!-- UseWPF trims the implicit using set; System.IO is not in it. -->
+    <Using Include="System.IO" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\AppLedger.App\AppLedger.App.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
