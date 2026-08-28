@@ -6,7 +6,75 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="{Binding ViewModel.Title, Mode=OneWay}">
 
-    <StackPanel Margin="{StaticResource PageMargin}">
-        <TextBlock Style="{StaticResource PageTitleStyle}" Text="{Binding ViewModel.Title, Mode=OneWay}" />
-    </StackPanel>
+    <Grid Margin="{StaticResource PageMargin}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            Grid.Row="0"
+            Style="{StaticResource PageTitleStyle}"
+            Text="{Binding ViewModel.Title, Mode=OneWay}" />
+
+        <ui:InfoBar
+            Grid.Row="1"
+            Title="{x:Static res:Strings.Lite_Banner_Title}"
+            Margin="{StaticResource CardMargin}"
+            IsClosable="False"
+            IsOpen="{Binding ViewModel.IsLite, Mode=OneWay}"
+            Message="{x:Static res:Strings.Lite_Banner_Body}"
+            Severity="Informational" />
+
+        <!--
+            ItemsSource is bound once, to a collection whose rows are updated in place. Rebinding it each
+            second would reset selection, scroll and sort on every refresh (docs/22 §Gotchas).
+
+            EnableRowVirtualization because a busy machine has hundreds of apps and every one of them is a
+            row that would otherwise be realised whether or not it is on screen.
+        -->
+        <DataGrid
+            Grid.Row="2"
+            AutoGenerateColumns="False"
+            CanUserAddRows="False"
+            CanUserDeleteRows="False"
+            EnableRowVirtualization="True"
+            GridLinesVisibility="None"
+            IsReadOnly="True"
+            ItemsSource="{Binding ViewModel.Rows, Mode=OneWay}"
+            VirtualizingPanel.IsVirtualizing="True"
+            VirtualizingPanel.VirtualizationMode="Recycling">
+            <DataGrid.Columns>
+                <DataGridTextColumn
+                    Width="*"
+                    Binding="{Binding AppId, Mode=OneWay}"
+                    Header="{x:Static res:Strings.Col_App}" />
+                <DataGridTextColumn
+                    Binding="{Binding Procs, Mode=OneWay}"
+                    Header="{x:Static res:Strings.Col_Procs}" />
+                <DataGridTextColumn
+                    Binding="{Binding CpuPct, Mode=OneWay, StringFormat={}{0:0.0}}"
+                    Header="{x:Static res:Strings.Col_Cpu}" />
+                <DataGridTextColumn
+                    Binding="{Binding WsPrivate, Mode=OneWay, StringFormat={}{0:N0}}"
+                    Header="{x:Static res:Strings.Col_Memory}" />
+                <DataGridTextColumn
+                    Binding="{Binding GpuPct, Mode=OneWay, StringFormat={}{0:0.0}}"
+                    Header="{x:Static res:Strings.Col_Gpu}" />
+                <DataGridTextColumn
+                    Binding="{Binding DiskRead, Mode=OneWay, StringFormat={}{0:N0}}"
+                    Header="{x:Static res:Strings.Col_DiskRead}" />
+                <DataGridTextColumn
+                    Binding="{Binding DiskWrite, Mode=OneWay, StringFormat={}{0:N0}}"
+                    Header="{x:Static res:Strings.Col_DiskWrite}" />
+                <DataGridTextColumn
+                    Binding="{Binding NetIn, Mode=OneWay, StringFormat={}{0:N0}}"
+                    Header="{x:Static res:Strings.Col_NetIn}" />
+                <DataGridTextColumn
+                    Binding="{Binding NetOut, Mode=OneWay, StringFormat={}{0:N0}}"
+                    Header="{x:Static res:Strings.Col_NetOut}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
 </Page>
