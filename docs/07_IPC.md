@@ -7,21 +7,29 @@ directly; the pipe carries live data, commands and health.
 ## Transport & security
 
 - Name: `\\.\pipe\AppLedger.v1` (`v1` bumps on breaking changes; the UI tries the highest version it knows).
-- Server: `NamedPipeServerStreamAcl.Create(name, PipeDirection.InOut, maxNumberOfServerInstances: 4,
-  PipeTransmissionMode.Byte, PipeOptions.Asynchronous, inBufferSize, outBufferSize, pipeSecurity)` with an explicit
-  `PipeSecurity`:
+- Server: `CreateNamedPipeW` with a security descriptor built from SDDL
+  (`D:(A;;FA;;;<user>)(A;;FA;;;BA)S:(ML;;NW;;;ME)`), wrapped in a `NamedPipeServerStream`:
   - **DACL**: `FullControl` for the current user's SID and for `BUILTIN\Administrators`. Nothing else.
   - **SACL**: a mandatory label of **Medium** integrity. Without it the pipe inherits the creating process's High
     label and the Medium-IL UI cannot obtain write access — which is what connecting to a pipe requires.
+- **Not `NamedPipeServerStreamAcl.Create`, and not `PipeSecurity`.** The managed model maps a SACL onto *audit
+  rules*, and a mandatory-label ace is not an audit ace: `SetSecurityDescriptorSddlForm` accepts the string above,
+  **silently discards the label**, and returns a descriptor whose SACL reads back as an empty `S:`. Nothing throws.
+  The pipe would then be created unlabelled, keep the creator's High integrity, and refuse the UI — the exact
+  failure this section exists to prevent, reached through the API meant to prevent it. Measured, not reasoned:
+  `24_ADR.md` §Findings, 2026-08-28.
+- Writing a label at or below your own integrity needs no privilege, so this works from the unelevated UI too and
+  the descriptor is provable on CI. What CI cannot prove is a Medium-IL client connecting to a High-IL server —
+  one test process cannot be both — so that is a manual step (`tests/MANUAL_CHECKLIST.md`).
 - **Do not use `PipeOptions.CurrentUserOnly` here.** It looks like the simpler answer and it is the wrong one across
   this particular boundary: an elevated process's default token owner is `BUILTIN\Administrators`, so the pipe it
   creates is *owned* by that group, while the client-side `CurrentUserOnly` check compares the pipe's owner against
   `WindowsIdentity.GetCurrent().Owner` of a Medium-IL process, which is the user SID. The two do not match, and it
   sets no integrity label either. `24_ADR.md` ADR-17 records this; `19_TESTING.md` §Pipe security is the
   `Category=Admin` test that keeps it honest, because no non-elevated run can reproduce it.
-- Remote clients: `\\host\pipe\…` access must be refused. .NET's own `CreateNamedPipe` call already passes
-  `PIPE_REJECT_REMOTE_CLIENTS`; **verify that against the pinned runtime rather than assuming it**, and fall back to
-  `SetNamedPipeHandleState` on the raw handle if it does not.
+- Remote clients: `\\host\pipe\…` access is refused because `PIPE_REJECT_REMOTE_CLIENTS` is passed explicitly in the
+  `CreateNamedPipeW` call above. An earlier draft hedged about whether the BCL sets it on our behalf; creating the
+  pipe ourselves settles the question instead of inheriting it.
 - Client: `NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.Asynchronous)` — no `CurrentUserOnly`,
   for the reason above. The squatting defence is peer verification instead (next bullet).
 - **Peer verification, both directions.** After connect, each side resolves the other's PID

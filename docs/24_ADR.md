@@ -171,12 +171,16 @@ to the doc that was fixed.
   2. **No mandatory label.** An object created by a High-IL process carries a High label, and the no-write-up
      policy denies a Medium-IL process the write access that connecting to a pipe requires. `CurrentUserOnly` sets
      a DACL; it does not touch the SACL.
-- **Consequences:** the ACL types live in `System.IO.Pipes.AccessControl`, which ships in the .NET 10 shared
-  framework — no package pin, no lock-file churn — but every member is `[SupportedOSPlatform("windows")]` and
-  `AppLedger.Ipc` targets `net10.0`, so the factory and the peer check belong in `AppLedger.Infrastructure` and
-  `Ipc` only ever sees a connected `Stream`. Because neither failure mode can be reproduced from an unelevated
-  test run, this is covered by a `Category=Admin` test (`19_TESTING.md` §Pipe security) rather than by CI, and it
-  is the assertion an elevated round trip exists to settle.
+- **Consequences:** the pipe is created by `CreateNamedPipeW` with a descriptor built from SDDL, **not** by
+  `NamedPipeServerStreamAcl.Create` — the managed `PipeSecurity` model cannot carry a mandatory label at all
+  (§Findings, 2026-08-28), so the API that looks like the right one produces exactly the failure this ADR exists
+  to prevent. The P/Invoke and the peer check live in `AppLedger.Infrastructure`; `Ipc` targets `net10.0` and only
+  ever sees a connected `Stream`.
+- **Amended 2026-08-28 by measurement.** Writing a label at or below your own integrity needs no privilege, so the
+  descriptor is provable unelevated and most of it is a CI test rather than an `Category=Admin` one. What remains
+  admin-only is that an *elevated* process applies it; and what remains manual is the connect that actually
+  matters — a Medium-IL client to a High-IL server — because one test process cannot be both integrity levels
+  (`19_TESTING.md` §Pipe security, `tests/MANUAL_CHECKLIST.md`).
 
 ## Findings (append as discovered)
 
@@ -219,3 +223,4 @@ to the doc that was fixed.
 | 2026-08-28 | `EventsLost` can go **down**. It is the sum of two sessions' counters and a session that restarts starts again from zero, so `Degraded` cannot be derived from "value differs from last time" - only an *increase* is loss, and a decrease must re-baseline silently. Deriving it from inequality would hatch every chart after any session restart. | `docs/05` Failure handling |
 | 2026-08-28 | Carrying the 2-second GPU reading forward onto the off-second is **unbiased** in the minute rollup, not double-counted: `Rollup.FromSamples` divides by `samples.Count`, so 30 readings each appearing twice give `2 x sum / 60`, which is the mean of the readings. Zeroing the off-second instead yields exactly **half**. The intuition that carry-forward inflates the average is wrong, and it is the intuition that would have picked the biased option. | `docs/05` Accumulators |
 | 2026-08-28 | A JSON parser over peer bytes throws in two separate ways, and only one of them looks like a parse error. `Utf8JsonReader.Read()` raises `JsonException` for unparseable input, but the `TryGet*` family raises **`InvalidOperationException`** when the token is merely of another kind - so `TryGetInt64` on `"id":"three"` throws, despite the name promising otherwise. A `Try`-shaped wrapper that catches only `JsonException` still dies on the first frame any same-user process cares to malform. Both parsers now catch both, and a fuzz test over truncations and single-byte corruptions of a valid frame is what found it - reading the code had not. | `Ipc/IpcEnvelope.cs`, `Ipc/Streams/AppsTick.cs` |
+| 2026-08-28 | **`PipeSecurity` cannot carry a mandatory integrity label, and says nothing when it drops one.** The managed `ObjectSecurity` model maps a SACL onto *audit rules*, and an `ML` ace is not an audit ace - so `SetSecurityDescriptorSddlForm("D:(...)S:(ML;;NW;;;ME)")` returns normally, keeps the DACL, and silently discards the label; reading the SACL back gives an empty `S:`. `NamedPipeServerStreamAcl.Create` with that descriptor then fails outright with "a required privilege is not held", because an empty SACL still asks for `SE_SECURITY_NAME`. Had it succeeded, the pipe would have been created unlabelled, kept the elevated Agent's High integrity, and refused the unelevated UI - the exact failure ADR-17 exists to prevent, reached through the API meant to prevent it. Building the descriptor with `ConvertStringSecurityDescriptorToSecurityDescriptorW` and passing it to `CreateNamedPipeW` keeps the label, needs no privilege, and is atomic; a probe confirmed the created pipe reads back `S:AI(ML;;NW;;;ME)` **unelevated**. | `Infrastructure/Ipc/NamedPipeServerFactory.cs`, `docs/07` Transport, ADR-17 |

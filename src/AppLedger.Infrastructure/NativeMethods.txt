@@ -85,3 +85,11 @@ WINTRUST_ACTION_GENERIC_VERIFY_V2
 // --- pipes (peer verification) ---
 GetNamedPipeClientProcessId
 GetNamedPipeServerProcessId
+// The pipe is created here rather than through NamedPipeServerStreamAcl because the managed PipeSecurity
+// model cannot carry a mandatory integrity label - it maps the SACL to audit rules and silently discards
+// an ML ace. docs/24_ADR.md ADR-17 and the 2026-08-28 Finding.
+CreateNamedPipe
+ConvertStringSecurityDescriptorToSecurityDescriptor
+ConvertSecurityDescriptorToStringSecurityDescriptor
+GetSecurityInfo
+LocalFree
