@@ -3,6 +3,7 @@ using AppLedger.Collector.Accumulators;
 using AppLedger.Core.Collection;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace AppLedger.Collector.Tests.Accumulators;
 
@@ -13,6 +14,10 @@ namespace AppLedger.Collector.Tests.Accumulators;
 /// </summary>
 public sealed class NetAccumulatorTests
 {
+    private readonly ITestOutputHelper _output;
+
+    public NetAccumulatorTests(ITestOutputHelper output) => _output = output;
+
     private static NetworkEvent Event(
         string remote = "93.184.216.34",
         int port = 443,
@@ -191,6 +196,29 @@ public sealed class NetAccumulatorTests
     public void Classify_NoRemoteAddress_IsNotLoopback() =>
         NetworkEvent.Classify(isTcp: true, IPAddress.Parse("192.168.1.10"), null, 443)
             .ShouldBe(NetworkProtocol.Tcp);
+
+    /// <summary>
+    /// One of these exists per network-active instance, constructed on a TraceEvent thread at the first
+    /// packet. Pre-sizing its two dictionaries to <see cref="NetAccumulator.MaxEndpointsPerApp"/> cost about
+    /// 250 KB each — ~75 MB for three hundred talkative processes, against the ~20 MB S1-lite leaves for the
+    /// whole collector (docs/24_ADR.md §Findings, 2026-08-28). The cap is a ceiling, not a forecast.
+    /// </summary>
+    [Fact]
+    public void Ctor_FreshInstance_AllocatesFarLessThanItsEndpointCap()
+    {
+        _ = new NetAccumulator();   // warm the type so its statics are not charged to the measurement
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var net = new NetAccumulator();
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        _output.WriteLine($"a fresh NetAccumulator costs {allocated} bytes; "
+            + $"300 network-active instances would be {300 * allocated / 1024} KB.");
+
+        GC.KeepAlive(net);
+        allocated.ShouldBeLessThan(1024,
+            "the endpoint dictionaries must grow on demand, not be sized for the 2 000-entry cap");
+    }
 }
 
 internal static class ProtocolAssertions
