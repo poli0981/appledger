@@ -63,6 +63,12 @@ can make the *elevated* Agent commit.
 Oversized → `Error(FrameTooLarge)` and **disconnect**. The reader must never skip the declared length to
 resynchronize: that is the attacker-controlled number, and there is no safe resync point in a byte-stream framing.
 
+**Every parser on this path is total.** A malformed frame is a value the reader returns, never an exception it
+raises: these bytes come from whatever is on the other end of the pipe, and an exception escaping into the
+connection loop ends the loop. That needs more care than it looks like — `Utf8JsonReader.TryGetInt64` throws
+`InvalidOperationException` when the token is a string rather than returning false (`24_ADR.md` §Findings,
+2026-08-28).
+
 Every frame is one envelope:
 
 ```json
