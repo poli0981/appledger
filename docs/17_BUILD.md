@@ -76,7 +76,9 @@ dotnet test --filter "Category!=Admin&Category!=Manual"        # CI-equivalent
 dotnet test                                                      # full, elevated terminal on a dev box
 dotnet run --project src/AppLedger.Agent -- --console            # elevated terminal
 dotnet run --project src/AppLedger.App                           # standard terminal; connects to the console Agent
-dotnet run --project spikes/S1.EtwBudget -- --hours 48 --out s1.csv
+dotnet run --project spikes/S1.EtwBudget -- --minutes 45 --out s1-lite.csv   # ETW pre-flight, elevated
+dotnet run --project spikes/S1.EtwBudget -- --hours 48 --out s1.csv          # S1 leg A, elevated
+python tools/s1-report.py --csv s1.csv --db "$env:LOCALAPPDATA\AppLedgerData\appledger.db"   # the S1 pass/fail table
 dotnet publish src/AppLedger.App -c Release -r win-x64 -o publish/win-x64
 dotnet publish src/AppLedger.Agent -c Release -r win-x64 -o publish/win-x64
 vpk pack --packId AppLedger --packVersion 1.0.0 --packDir publish/win-x64 --mainExe AppLedger.exe --icon src/AppLedger.App/Assets/icon.ico

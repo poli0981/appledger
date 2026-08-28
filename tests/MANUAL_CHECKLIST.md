@@ -55,6 +55,68 @@ Encoding is the first thing to check: `schtasks` reports a UTF-8 file as malform
 
 ---
 
+## S1 — the 48-hour budget run
+
+`docs/20_SPIKES.md` §S1. Two legs, run separately, each 48 h elevated. This is the gate for the always-on
+premise: if it fails, `docs/24_ADR.md` ADR-3 is reopened and "collect only while the UI is open" becomes a
+product question.
+
+Neither leg can be automated for the obvious reason — it takes two days of a real machine being used by a
+real person — and for a less obvious one: the load it measures is *your* load. A synthetic driver would
+measure the driver.
+
+**Leg A — the collector alone.** Elevated terminal:
+
+```
+dotnet run -c Release --project spikes/S1.EtwBudget -- --hours 48 --out s1.csv
+```
+
+**Leg B — the Agent that ships.** A second elevated terminal, ideally on a different day so the two legs are
+not competing for the same ETW buffers and the same disk:
+
+```
+dotnet run -c Release --project src/AppLedger.Agent -- --console
+```
+
+During each run, per `docs/20` §S1:
+
+- [ ] ≥ 2 h of a game, one of them with EasyAntiCheat running
+- [ ] a 1 GB file copy and a Steam download
+- [ ] a browser session, ~200 tabs opened over the run
+- [ ] one sleep/resume
+- [ ] one 10-minute window with the machine left completely alone — **note the wall-clock time**, it is what
+      `--idle` takes
+- [ ] no AppLedger UI running, so the collector stays on the idle profile the budget is written against
+
+Then read both legs back:
+
+```
+python tools/s1-report.py --csv s1.csv --db "%LOCALAPPDATA%\AppLedgerData\appledger.db" --idle 03:00-03:10
+```
+
+- [ ] every row of both tables is PASS, or the failures are understood and recorded
+- [ ] leg B's private WS at hour 24 and hour 48 are both under 100 MB — the two checkpoints exist because a
+      leak shows up as the difference between them, not as either number alone
+- [ ] the gap list contains the sleep/resume and nothing else. A gap nobody performed is an Agent that stopped
+      writing, which is a bug in the thing being measured rather than a measurement
+- [ ] leg A minus leg B is recorded: that difference is the cost of the pipe server, Serilog, the catalog and
+      the real database, and it is the number that says where to cut if the budget is missed
+
+Then settle what only this run can settle:
+
+- [ ] `cache_size` in `docs/06_DATA_MODEL.md` §Pragmas — provisional at `-32000` (32 MB) since S1-lite measured
+      a ~75 MB floor. Leg B's working set is what decides it
+- [ ] temp database growth against S5's model
+- [ ] results into `docs/20_SPIKES.md` §Status, `RELEASE_NOTES.md` and `docs/21_ROADMAP.md`
+
+One ARM64 check, which needs no 48 hours:
+
+- [ ] `dotnet run -c Release -p:Platform=ARM64 --project spikes/S1.EtwBudget -- --minutes 5` on an ARM64 box —
+      TraceEvent's native `KernelTraceControl.dll` either loads or it does not. If it does not, ARM64 ships
+      Lite-only and an ADR records why
+
+---
+
 ## Release matrix
 
 From `docs/19_TESTING.md`. Every row is one machine.

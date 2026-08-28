@@ -71,10 +71,12 @@ number worth having — it is the cost of the pipe server, the identity resolver
 spike deliberately does not carry.
 
 - **Leg A — the pipeline alone (`spikes/S1.EtwBudget --hours`).** Hosts `AppLedger.Collector` with
-  `Privilege=Elevated`, the real `AppLedger-Kernel` + `AppLedger-User` sessions, FileIO sampling windows on, rollups
-  into a temp SQLite, **no pipe server and no UI**. Logs its own CPU time, private WS, `EventsLost` per session,
-  handler errors and GC counts every **10 s** to CSV. This is the isolation run: if it fails, the fault is in the
-  collector, not in anything the Agent adds.
+  `Privilege=Elevated`, the real `AppLedger-Kernel` + `AppLedger-User` sessions and rollups
+  into a temp SQLite under `%TEMP%`, **no pipe server and no UI**. Logs its own CPU time, private WS, GC counts and
+  every counter in `CollectorHealth` every **10 s** to CSV — `EventsLost` as the summed figure the collector
+  actually exposes, not per session, because nothing above `EtwHub` sees the split. It never calls
+  `NoteUiActivity`, so the run stays on the idle profile the budget is written against. This is the isolation
+  run: if it fails, the fault is in the collector, not in anything the Agent adds.
 - **Leg B — the Agent that actually ships (`AppLedger.Agent.exe --console`).** The real composition root, the pipe
   server, Serilog, the catalog and the real database. No extra instrumentation and **no measurement-only CLI flag**:
   the Agent already self-measures and writes one `health_minutes` row per minute (`15_LOGGING.md` §Agent
@@ -85,6 +87,18 @@ spike deliberately does not carry.
   file copy + a Steam download, a browser session with ~200 tabs opened over time, one sleep/resume, one 10-min idle
   window. Repeat the first 6 h of leg B on the Windows 10 VM. Build for ARM64 once to confirm TraceEvent's native
   bits load (`KernelTraceControl.dll`) — if they don't, ARM64 ships Lite-only and ADR records it.
+- **Readback:** `python tools/s1-report.py --csv s1.csv --db <data root>/appledger.db` renders both legs against
+  the pass criteria below. Stdlib-only and read-only, so it can be run against a live Agent mid-run. Note what
+  it can and cannot decide: `health_minutes` has no column for the idle profile, so the idle criterion is read
+  against the quietest contiguous ten minutes of the run — the procedure's idle window, found rather than
+  declared — and the report says so on the line. `--idle HH:MM-HH:MM` overrides it for leg B when the window
+  was noted at the time. Handler errors and late samples have no column either; leg A is what reports them.
+- **What this run cannot settle: FileIO.** The sampling windows of `05_COLLECTOR.md` §FileIO are a **v0.4** item
+  (`21_ROADMAP.md`) and `EtwHub` does not enable the keyword at all yet, so neither leg exercises the noisiest
+  provider AppLedger will ever enable. Every number below is therefore an underestimate of the shipping v1
+  collector by exactly that amount, and the "lost events during the 1 GB copy only in FileIO" clause of the pass
+  criteria is vacuous until v0.4. S1 is re-run when the windows land; that re-run is the one that settles the
+  criterion, and this one is what says whether everything else fits without it.
 - **What leg B settles that leg A cannot:** the Agent's SQLite `cache_size`. `06_DATA_MODEL.md` sets it to
   `-32000` (32 MB) and marks the value provisional, because S1-lite measured a ~75 MB floor before any storage
   existed. Leg B is where that pragma stops being an assumption.
