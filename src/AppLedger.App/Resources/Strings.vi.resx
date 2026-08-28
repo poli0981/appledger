@@ -98,6 +98,86 @@
   <data name="State_NoDataYet" xml:space="preserve">
     <value>Chưa có dữ liệu. Agent vừa bắt đầu thu thập.</value>
   </data>
+  <data name="Onboarding_Step" xml:space="preserve">
+    <value>Bước {0} trên {1}</value>
+    <comment>{0} = current step number, {1} = total steps</comment>
+  </data>
+  <data name="Onboarding_Continue" xml:space="preserve">
+    <value>Tiếp tục</value>
+  </data>
+  <data name="Onboarding_Back" xml:space="preserve">
+    <value>Quay lại</value>
+  </data>
+  <data name="Privacy_Gate_Title" xml:space="preserve">
+    <value>Trước khi bắt đầu</value>
+  </data>
+  <data name="Privacy_Gate_What_Heading" xml:space="preserve">
+    <value>Những gì được ghi lại</value>
+  </data>
+  <data name="Privacy_Gate_What_Body" xml:space="preserve">
+    <value>AppLedger ghi lại ứng dụng nào chạy, chúng dùng bao nhiêu CPU/bộ nhớ/đĩa/mạng, lưu tệp ở đâu, và - với hầu hết ứng dụng - chúng liên lạc với website/máy chủ nào.</value>
+  </data>
+  <data name="Privacy_Gate_Browsers_Heading" xml:space="preserve">
+    <value>Trình duyệt web</value>
+  </data>
+  <data name="Privacy_Gate_Browsers_Body" xml:space="preserve">
+    <value>Với trình duyệt web, chúng tôi chỉ ghi lượng dữ liệu đã dùng, không ghi trang nào. Bạn có thể đổi điều này cho từng ứng dụng.</value>
+  </data>
+  <data name="Privacy_Gate_Where_Heading" xml:space="preserve">
+    <value>Lưu ở đâu</value>
+  </data>
+  <data name="Privacy_Gate_Where_Body" xml:space="preserve">
+    <value>Mọi thứ nằm trên máy này, trong %LOCALAPPDATA%\AppLedgerData. Không có gì được tải lên. AppLedger không có tài khoản.</value>
+  </data>
+  <data name="Privacy_Gate_HowLong_Heading" xml:space="preserve">
+    <value>Giữ trong bao lâu</value>
+  </data>
+  <data name="Privacy_Gate_HowLong_Body" xml:space="preserve">
+    <value>Mặc định 6 tháng. Bạn có thể rút ngắn, tạm dừng, hoặc xoá tất cả chỉ bằng một cú nhấp.</value>
+  </data>
+  <data name="Privacy_Gate_Who_Heading" xml:space="preserve">
+    <value>Ai xem được</value>
+  </data>
+  <data name="Privacy_Gate_Who_Body" xml:space="preserve">
+    <value>Bất kỳ ai đăng nhập được bằng tài khoản của bạn trên máy này. Hãy bảo vệ tài khoản tương xứng.</value>
+  </data>
+  <data name="Privacy_Gate_ReadPolicy" xml:space="preserve">
+    <value>Đọc chính sách đầy đủ</value>
+  </data>
+  <data name="Agent_Setup_Title" xml:space="preserve">
+    <value>Agent chạy nền</value>
+  </data>
+  <data name="Agent_Setup_Body" xml:space="preserve">
+    <value>Số liệu mạng, đĩa và DNS cần một dịch vụ nền nhỏ chạy với quyền quản trị và khởi động khi bạn đăng nhập. Cài nó sẽ hỏi quyền một lần duy nhất.</value>
+  </data>
+  <data name="Agent_Setup_Budget" xml:space="preserve">
+    <value>Nó giữ dưới 1% CPU khi rảnh và dưới 100 MB bộ nhớ.</value>
+  </data>
+  <data name="Agent_Setup_Install" xml:space="preserve">
+    <value>Cài Agent</value>
+  </data>
+  <data name="Agent_Setup_Skip" xml:space="preserve">
+    <value>Tiếp tục ở chế độ rút gọn</value>
+  </data>
+  <data name="Agent_Setup_Installed" xml:space="preserve">
+    <value>Agent đã cài và đang chạy.</value>
+  </data>
+  <data name="Agent_Setup_Declined" xml:space="preserve">
+    <value>Tiếp tục không có Agent. Bạn có thể cài sau trong Cài đặt.</value>
+  </data>
+  <data name="Agent_Start" xml:space="preserve">
+    <value>Khởi động Agent</value>
+  </data>
+  <data name="Defaults_Title" xml:space="preserve">
+    <value>Mặc định</value>
+  </data>
+  <data name="Defaults_Retention" xml:space="preserve">
+    <value>Giữ lịch sử {0} ngày</value>
+    <comment>{0} = number of days</comment>
+  </data>
+  <data name="Defaults_Done" xml:space="preserve">
+    <value>Xong</value>
+  </data>
   <data name="Col_App" xml:space="preserve">
     <value>Ứng dụng</value>
   </data>

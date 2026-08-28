@@ -63,6 +63,84 @@ public static class Strings
     /// <summary>No data yet. The Agent has only just started collecting.</summary>
     public static string State_NoDataYet => Get(nameof(State_NoDataYet));
 
+    /// <summary>Step {0} of {1}</summary>
+    public static string Onboarding_Step => Get(nameof(Onboarding_Step));
+
+    /// <summary>Continue</summary>
+    public static string Onboarding_Continue => Get(nameof(Onboarding_Continue));
+
+    /// <summary>Back</summary>
+    public static string Onboarding_Back => Get(nameof(Onboarding_Back));
+
+    /// <summary>Before we start</summary>
+    public static string Privacy_Gate_Title => Get(nameof(Privacy_Gate_Title));
+
+    /// <summary>What is recorded</summary>
+    public static string Privacy_Gate_What_Heading => Get(nameof(Privacy_Gate_What_Heading));
+
+    /// <summary>AppLedger records which apps run, how much CPU/memory/disk/network they use, where they store files, and - for most apps - which websites/hosts they talk to.</summary>
+    public static string Privacy_Gate_What_Body => Get(nameof(Privacy_Gate_What_Body));
+
+    /// <summary>Web browsers</summary>
+    public static string Privacy_Gate_Browsers_Heading => Get(nameof(Privacy_Gate_Browsers_Heading));
+
+    /// <summary>For web browsers we record only how much data they used, not which sites. You can change this per app.</summary>
+    public static string Privacy_Gate_Browsers_Body => Get(nameof(Privacy_Gate_Browsers_Body));
+
+    /// <summary>Where it is stored</summary>
+    public static string Privacy_Gate_Where_Heading => Get(nameof(Privacy_Gate_Where_Heading));
+
+    /// <summary>Everything stays on this PC in %LOCALAPPDATA%\AppLedgerData. Nothing is uploaded. AppLedger has no accounts.</summary>
+    public static string Privacy_Gate_Where_Body => Get(nameof(Privacy_Gate_Where_Body));
+
+    /// <summary>How long it is kept</summary>
+    public static string Privacy_Gate_HowLong_Heading => Get(nameof(Privacy_Gate_HowLong_Heading));
+
+    /// <summary>6 months by default. You can shorten it, pause, or delete everything in one click.</summary>
+    public static string Privacy_Gate_HowLong_Body => Get(nameof(Privacy_Gate_HowLong_Body));
+
+    /// <summary>Who can see it</summary>
+    public static string Privacy_Gate_Who_Heading => Get(nameof(Privacy_Gate_Who_Heading));
+
+    /// <summary>Anyone who can log in as you on this PC. Protect your account accordingly.</summary>
+    public static string Privacy_Gate_Who_Body => Get(nameof(Privacy_Gate_Who_Body));
+
+    /// <summary>Read full policy</summary>
+    public static string Privacy_Gate_ReadPolicy => Get(nameof(Privacy_Gate_ReadPolicy));
+
+    /// <summary>The background Agent</summary>
+    public static string Agent_Setup_Title => Get(nameof(Agent_Setup_Title));
+
+    /// <summary>Network, disk and DNS figures need a small background service that runs with administrator rights and starts when you sign in. Installing it asks for permission once.</summary>
+    public static string Agent_Setup_Body => Get(nameof(Agent_Setup_Body));
+
+    /// <summary>It stays under 1% CPU when idle and under 100 MB of memory.</summary>
+    public static string Agent_Setup_Budget => Get(nameof(Agent_Setup_Budget));
+
+    /// <summary>Install Agent</summary>
+    public static string Agent_Setup_Install => Get(nameof(Agent_Setup_Install));
+
+    /// <summary>Continue in Lite mode</summary>
+    public static string Agent_Setup_Skip => Get(nameof(Agent_Setup_Skip));
+
+    /// <summary>The Agent is installed and running.</summary>
+    public static string Agent_Setup_Installed => Get(nameof(Agent_Setup_Installed));
+
+    /// <summary>Continuing without the Agent. You can install it later from Settings.</summary>
+    public static string Agent_Setup_Declined => Get(nameof(Agent_Setup_Declined));
+
+    /// <summary>Start Agent</summary>
+    public static string Agent_Start => Get(nameof(Agent_Start));
+
+    /// <summary>Defaults</summary>
+    public static string Defaults_Title => Get(nameof(Defaults_Title));
+
+    /// <summary>Keep history for {0} days</summary>
+    public static string Defaults_Retention => Get(nameof(Defaults_Retention));
+
+    /// <summary>Done</summary>
+    public static string Defaults_Done => Get(nameof(Defaults_Done));
+
     /// <summary>App</summary>
     public static string Col_App => Get(nameof(Col_App));
 
@@ -151,6 +229,32 @@ public static class Strings
         nameof(Page_Settings_Title),
         nameof(State_NotYetBuilt),
         nameof(State_NoDataYet),
+        nameof(Onboarding_Step),
+        nameof(Onboarding_Continue),
+        nameof(Onboarding_Back),
+        nameof(Privacy_Gate_Title),
+        nameof(Privacy_Gate_What_Heading),
+        nameof(Privacy_Gate_What_Body),
+        nameof(Privacy_Gate_Browsers_Heading),
+        nameof(Privacy_Gate_Browsers_Body),
+        nameof(Privacy_Gate_Where_Heading),
+        nameof(Privacy_Gate_Where_Body),
+        nameof(Privacy_Gate_HowLong_Heading),
+        nameof(Privacy_Gate_HowLong_Body),
+        nameof(Privacy_Gate_Who_Heading),
+        nameof(Privacy_Gate_Who_Body),
+        nameof(Privacy_Gate_ReadPolicy),
+        nameof(Agent_Setup_Title),
+        nameof(Agent_Setup_Body),
+        nameof(Agent_Setup_Budget),
+        nameof(Agent_Setup_Install),
+        nameof(Agent_Setup_Skip),
+        nameof(Agent_Setup_Installed),
+        nameof(Agent_Setup_Declined),
+        nameof(Agent_Start),
+        nameof(Defaults_Title),
+        nameof(Defaults_Retention),
+        nameof(Defaults_Done),
         nameof(Col_App),
         nameof(Col_Procs),
         nameof(Col_Cpu),

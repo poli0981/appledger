@@ -110,6 +110,110 @@
     <value>データはまだありません。エージェントは収集を開始したばかりです。</value>
     <comment>review</comment>
   </data>
+  <data name="Onboarding_Step" xml:space="preserve">
+    <value>ステップ {0} / {1}</value>
+    <comment>{0} = current step number, {1} = total steps - review</comment>
+  </data>
+  <data name="Onboarding_Continue" xml:space="preserve">
+    <value>続ける</value>
+    <comment>review</comment>
+  </data>
+  <data name="Onboarding_Back" xml:space="preserve">
+    <value>戻る</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_Title" xml:space="preserve">
+    <value>始める前に</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_What_Heading" xml:space="preserve">
+    <value>記録される内容</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_What_Body" xml:space="preserve">
+    <value>AppLedger は、どのアプリが実行され、CPU・メモリ・ディスク・ネットワークをどれだけ使用し、ファイルをどこに保存し、（ほとんどのアプリについては）どのウェブサイトやホストと通信したかを記録します。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_Browsers_Heading" xml:space="preserve">
+    <value>ウェブ ブラウザー</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_Browsers_Body" xml:space="preserve">
+    <value>ウェブ ブラウザーについては、使用したデータ量のみを記録し、どのサイトかは記録しません。これはアプリごとに変更できます。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_Where_Heading" xml:space="preserve">
+    <value>保存場所</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_Where_Body" xml:space="preserve">
+    <value>すべてこの PC の %LOCALAPPDATA%\AppLedgerData に保存されます。アップロードは行われず、AppLedger にアカウントはありません。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_HowLong_Heading" xml:space="preserve">
+    <value>保持期間</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_HowLong_Body" xml:space="preserve">
+    <value>既定では 6 か月です。短縮、一時停止、またはワンクリックですべて削除できます。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_Who_Heading" xml:space="preserve">
+    <value>閲覧できる人</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_Who_Body" xml:space="preserve">
+    <value>この PC にあなたとしてサインインできる人は誰でも閲覧できます。アカウントを適切に保護してください。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Privacy_Gate_ReadPolicy" xml:space="preserve">
+    <value>ポリシー全文を読む</value>
+    <comment>review</comment>
+  </data>
+  <data name="Agent_Setup_Title" xml:space="preserve">
+    <value>バックグラウンド エージェント</value>
+    <comment>review</comment>
+  </data>
+  <data name="Agent_Setup_Body" xml:space="preserve">
+    <value>ネットワーク、ディスク、DNS の数値には、管理者権限で動作しサインイン時に起動する小さなバックグラウンド サービスが必要です。インストール時に一度だけ許可を求めます。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Agent_Setup_Budget" xml:space="preserve">
+    <value>アイドル時は CPU 1% 未満、メモリ 100 MB 未満に収まります。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Agent_Setup_Install" xml:space="preserve">
+    <value>エージェントをインストール</value>
+    <comment>review</comment>
+  </data>
+  <data name="Agent_Setup_Skip" xml:space="preserve">
+    <value>ライト モードで続行</value>
+    <comment>review</comment>
+  </data>
+  <data name="Agent_Setup_Installed" xml:space="preserve">
+    <value>エージェントがインストールされ、実行中です。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Agent_Setup_Declined" xml:space="preserve">
+    <value>エージェントなしで続行します。後で設定からインストールできます。</value>
+    <comment>review</comment>
+  </data>
+  <data name="Agent_Start" xml:space="preserve">
+    <value>エージェントを開始</value>
+    <comment>review</comment>
+  </data>
+  <data name="Defaults_Title" xml:space="preserve">
+    <value>既定値</value>
+    <comment>review</comment>
+  </data>
+  <data name="Defaults_Retention" xml:space="preserve">
+    <value>履歴を {0} 日間保持</value>
+    <comment>{0} = number of days - review</comment>
+  </data>
+  <data name="Defaults_Done" xml:space="preserve">
+    <value>完了</value>
+    <comment>review</comment>
+  </data>
   <data name="Col_App" xml:space="preserve">
     <value>アプリ</value>
     <comment>review</comment>

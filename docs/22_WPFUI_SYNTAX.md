@@ -175,7 +175,13 @@ var result = await box.ShowDialogAsync(); // Wpf.Ui.Controls.MessageBoxResult.Pr
 
   ⚠ Name clash with `System.Windows.MessageBox` — `using MessageBox = Wpf.Ui.Controls.MessageBox;` in App code; the
   System one is banned via `BannedSymbols.txt`.
-- Rich in-flow dialogs (Privacy Gate, Agent setup, assign-to-app): `IContentDialogService` (host wired in MainWindow).
+- Rich in-flow dialogs (assign-to-app, confirmations with more than a sentence in them): `IContentDialogService`
+  (host wired in MainWindow).
+- **Onboarding is a page, not a dialog.** This document previously listed the Privacy Gate and Agent setup among the
+  content dialogs while `08_UI.md` §Onboarding described them as pages, and the page is right: it is a three-step
+  flow with a retention slider and a link out to the full policy, and a modal that blocks the window it is
+  explaining is the wrong shape for something the user is meant to read. It is navigated to like any other page,
+  and the rail is hidden until it is done.
 - Transient in-app: `ISnackbarService.Show(title, message, ControlAppearance.Success, new SymbolIcon(SymbolRegular.Checkmark24), TimeSpan.FromSeconds(4))`.
 - System/tray: tray icon + context menu via **H.NotifyIcon** only; Windows toasts via `Microsoft.Toolkit.Uwp.Notifications`
   (`ToastContentBuilder`) — policy in `08_UI.md` §Notifications (toasts are opt-in, never for browser hosts).

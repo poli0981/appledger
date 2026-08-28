@@ -3,6 +3,7 @@ using AppLedger.App.Resources;
 using AppLedger.App.Services;
 using AppLedger.Ipc;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AppLedger.App.ViewModels;
 
@@ -23,9 +24,14 @@ public sealed partial class HomeViewModel : ObservableObject
     /// transient view-model would resubscribe on every visit to Home and leave the previous one attached to
     /// the client, so the tick would be applied once per visit ever made.
     /// </remarks>
-    public HomeViewModel(IAgentClient client)
+    private readonly IAgentSetup _setup;
+
+    public HomeViewModel(IAgentClient client, IAgentSetup setup)
     {
         ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(setup);
+
+        _setup = setup;
 
         client.StatusChanged += Apply;
         client.HealthTick += Apply;
@@ -43,7 +49,23 @@ public sealed partial class HomeViewModel : ObservableObject
 
     /// <summary>True in Lite mode, which is what shows the banner.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStartAgent))]
     private bool _isLite;
+
+    /// <summary>Whether the Scheduled Task exists even though nothing is answering.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStartAgent))]
+    private bool _taskInstalled;
+
+    /// <summary>
+    /// True only for the one case a button can fix: the task exists, but no Agent answered.
+    /// </summary>
+    /// <remarks>
+    /// The two Lite cases are different offers and must not share a button. With no task the answer is
+    /// Agent setup and a UAC prompt; with a task that is simply not running, `schtasks /Run` needs no
+    /// elevation at all for its owner (docs/01 §Elevation strategy step 3, docs/16 §Agent CLI).
+    /// </remarks>
+    public bool CanStartAgent => IsLite && TaskInstalled;
 
     /// <summary>The Agent's version, or null in Lite mode.</summary>
     [ObservableProperty]
@@ -78,6 +100,7 @@ public sealed partial class HomeViewModel : ObservableObject
         };
 
         IsLite = status.Mode == ConnectionMode.Lite;
+        TaskInstalled = status.TaskInstalled || (status.Mode == ConnectionMode.Lite && _setup.IsTaskInstalled());
         AgentVersion = status.AgentVersion;
 
         // Lite mode has no Agent, so its cost is this process's - which is not the same number and must not
@@ -101,6 +124,17 @@ public sealed partial class HomeViewModel : ObservableObject
         EventsLost = health.EventsLost;
 
         ApplySensors(health.Sensors);
+    }
+
+    /// <summary>Starts an installed task. No elevation: the owner may start their own task.</summary>
+    [RelayCommand]
+    private async Task StartAgentAsync(CancellationToken cancellationToken)
+    {
+        await _setup.StartAsync(cancellationToken).ConfigureAwait(true);
+
+        // Deliberately not re-checking here. The client reconnects on its own schedule, and a button that
+        // reported success before the Agent had actually opened its pipe would be reporting the schtasks
+        // exit code, not the thing the user asked about.
     }
 
     private void ApplySensors(IReadOnlyDictionary<string, SensorStatePayload> sensors)

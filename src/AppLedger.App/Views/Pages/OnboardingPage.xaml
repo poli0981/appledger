@@ -1,0 +1,151 @@
+﻿<Page
+    x:Class="AppLedger.App.Views.Pages.OnboardingPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:res="clr-namespace:AppLedger.App.Resources"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <Page.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="720" Margin="{StaticResource PageMargin}">
+
+            <ui:TextBlock
+                Margin="0,0,0,8"
+                FontTypography="Caption"
+                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                Text="{Binding ViewModel.StepLabel, Mode=OneWay}" />
+
+            <!--  Step 1: the Privacy Gate. No toggles - it tells, it does not ask (docs/12 §Privacy Gate).  -->
+            <StackPanel Visibility="{Binding ViewModel.IsPrivacyGate, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Static res:Strings.Privacy_Gate_Title}" />
+
+                <ui:Card Margin="{StaticResource CardMargin}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static res:Strings.Privacy_Gate_What_Heading}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource PageBodyStyle}"
+                            Text="{x:Static res:Strings.Privacy_Gate_What_Body}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Margin="{StaticResource CardMargin}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static res:Strings.Privacy_Gate_Browsers_Heading}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource PageBodyStyle}"
+                            Text="{x:Static res:Strings.Privacy_Gate_Browsers_Body}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Margin="{StaticResource CardMargin}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static res:Strings.Privacy_Gate_Where_Heading}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource PageBodyStyle}"
+                            Text="{x:Static res:Strings.Privacy_Gate_Where_Body}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Margin="{StaticResource CardMargin}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static res:Strings.Privacy_Gate_HowLong_Heading}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource PageBodyStyle}"
+                            Text="{x:Static res:Strings.Privacy_Gate_HowLong_Body}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Margin="{StaticResource CardMargin}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static res:Strings.Privacy_Gate_Who_Heading}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            Style="{StaticResource PageBodyStyle}"
+                            Text="{x:Static res:Strings.Privacy_Gate_Who_Body}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                    <ui:Button
+                        Appearance="Primary"
+                        Command="{Binding ViewModel.ContinueCommand, Mode=OneWay}"
+                        Content="{x:Static res:Strings.Onboarding_Continue}" />
+                    <ui:HyperlinkButton
+                        Margin="12,0,0,0"
+                        Command="{Binding ViewModel.ReadPolicyCommand, Mode=OneWay}"
+                        Content="{x:Static res:Strings.Privacy_Gate_ReadPolicy}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!--  Step 2: the Agent. Declining is Lite mode, not a failure.  -->
+            <StackPanel Visibility="{Binding ViewModel.IsAgentSetup, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Static res:Strings.Agent_Setup_Title}" />
+
+                <ui:Card Margin="{StaticResource CardMargin}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PageBodyStyle}" Text="{x:Static res:Strings.Agent_Setup_Body}" />
+                        <TextBlock
+                            Margin="0,8,0,0"
+                            Style="{StaticResource PageBodyStyle}"
+                            Text="{x:Static res:Strings.Agent_Setup_Budget}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                    <ui:Button
+                        Appearance="Primary"
+                        Command="{Binding ViewModel.InstallAgentCommand, Mode=OneWay}"
+                        Content="{x:Static res:Strings.Agent_Setup_Install}"
+                        IsEnabled="{Binding ViewModel.CanInstall, Mode=OneWay}" />
+                    <ui:Button
+                        Margin="12,0,0,0"
+                        Command="{Binding ViewModel.SkipAgentCommand, Mode=OneWay}"
+                        Content="{x:Static res:Strings.Agent_Setup_Skip}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!--  Step 3: defaults.  -->
+            <StackPanel Visibility="{Binding ViewModel.IsDefaults, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Static res:Strings.Defaults_Title}" />
+
+                <ui:InfoBar
+                    Margin="{StaticResource CardMargin}"
+                    IsClosable="False"
+                    IsOpen="True"
+                    Message="{Binding ViewModel.AgentOutcome, Mode=OneWay}"
+                    Severity="Informational" />
+
+                <ui:Card Margin="{StaticResource CardMargin}">
+                    <StackPanel>
+                        <ui:TextBlock FontTypography="BodyStrong" Text="{Binding ViewModel.RetentionLabel, Mode=OneWay}" />
+                        <Slider
+                            Margin="0,8,0,0"
+                            IsSnapToTickEnabled="True"
+                            Maximum="365"
+                            Minimum="30"
+                            TickFrequency="5"
+                            Value="{Binding ViewModel.RetentionDays, Mode=TwoWay}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                    <ui:Button
+                        Appearance="Primary"
+                        Command="{Binding ViewModel.FinishCommand, Mode=OneWay}"
+                        Content="{x:Static res:Strings.Defaults_Done}" />
+                    <ui:Button
+                        Margin="12,0,0,0"
+                        Command="{Binding ViewModel.BackCommand, Mode=OneWay}"
+                        Content="{x:Static res:Strings.Onboarding_Back}" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

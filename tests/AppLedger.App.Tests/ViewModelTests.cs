@@ -193,7 +193,7 @@ public sealed class ViewModelTests
     public void Home_Mode_IsShownAsItsLocalizedName(ConnectionMode mode, string expected)
     {
         var client = new FakeAgentClient();
-        var viewModel = new HomeViewModel(client);
+        var viewModel = new HomeViewModel(client, new FakeAgentSetup());
 
         client.Publish(Status(mode));
 
@@ -204,7 +204,7 @@ public sealed class ViewModelTests
     public void Home_Health_ShowsTheAgentsOwnCost()
     {
         var client = new FakeAgentClient();
-        var viewModel = new HomeViewModel(client);
+        var viewModel = new HomeViewModel(client, new FakeAgentSetup());
 
         client.Publish(new HealthPayload
         {
@@ -231,7 +231,7 @@ public sealed class ViewModelTests
     public void Home_LiteMode_ReportsNoAgentCostRatherThanZero()
     {
         var client = new FakeAgentClient();
-        var viewModel = new HomeViewModel(client);
+        var viewModel = new HomeViewModel(client, new FakeAgentSetup());
 
         client.Publish(new HealthPayload
         {
@@ -259,7 +259,7 @@ public sealed class ViewModelTests
     public void Home_UnavailableSensor_IsShownAsNotRunning()
     {
         var client = new FakeAgentClient();
-        var viewModel = new HomeViewModel(client);
+        var viewModel = new HomeViewModel(client, new FakeAgentSetup());
 
         client.Publish(Status(ConnectionMode.Degraded, ("EtwHub", "Running"), ("GpuPoller", "Unavailable")));
 
@@ -272,7 +272,7 @@ public sealed class ViewModelTests
     public void Home_SensorNames_AreNeverLocalized()
     {
         var client = new FakeAgentClient();
-        var viewModel = new HomeViewModel(client);
+        var viewModel = new HomeViewModel(client, new FakeAgentSetup());
 
         client.Publish(Status(ConnectionMode.Full, ("EtwHub", "Running")));
 

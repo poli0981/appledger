@@ -50,6 +50,8 @@ public partial class App : Application
 
         // The Agent over the pipe, or the collector in this process when none answers (docs/01 §Lite mode).
         services.AddSingleton<IAgentClient>(_ => new AgentClient());
+        services.AddSingleton<AppSettingsStore>();
+        services.AddSingleton<IAgentSetup, AgentSetup>();
 
         // Every page named in MainWindow's TargetPageType must be registered here. A missing registration
         // throws at runtime the first time somebody clicks that rail item, not at build time - which is why
@@ -66,6 +68,14 @@ public partial class App : Application
         services.AddTransient<AlertsViewModel>();
         services.AddTransient<SettingsPage>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<OnboardingPage>();
+
+        // Built by hand because the completion callback is not a service: onboarding ends by navigating to
+        // Home, and expressing that as a dependency would make the view-model know about pages.
+        services.AddTransient(provider => new OnboardingViewModel(
+            provider.GetRequiredService<AppSettingsStore>(),
+            provider.GetRequiredService<IAgentSetup>(),
+            () => provider.GetRequiredService<INavigationService>().Navigate(typeof(HomePage))));
 
         // AppPage - the app-detail page of docs/08 - is not registered yet. It arrives with the identity
         // resolver in v0.3, and nothing can navigate to it before then; registering a page that cannot be
