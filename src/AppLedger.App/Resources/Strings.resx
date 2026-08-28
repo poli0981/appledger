@@ -98,6 +98,86 @@
   <data name="State_NoDataYet" xml:space="preserve">
     <value>No data yet. The Agent has only just started collecting.</value>
   </data>
+  <data name="Onboarding_Step" xml:space="preserve">
+    <value>Step {0} of {1}</value>
+    <comment>{0} = current step number, {1} = total steps</comment>
+  </data>
+  <data name="Onboarding_Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Onboarding_Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Privacy_Gate_Title" xml:space="preserve">
+    <value>Before we start</value>
+  </data>
+  <data name="Privacy_Gate_What_Heading" xml:space="preserve">
+    <value>What is recorded</value>
+  </data>
+  <data name="Privacy_Gate_What_Body" xml:space="preserve">
+    <value>AppLedger records which apps run, how much CPU/memory/disk/network they use, where they store files, and - for most apps - which websites/hosts they talk to.</value>
+  </data>
+  <data name="Privacy_Gate_Browsers_Heading" xml:space="preserve">
+    <value>Web browsers</value>
+  </data>
+  <data name="Privacy_Gate_Browsers_Body" xml:space="preserve">
+    <value>For web browsers we record only how much data they used, not which sites. You can change this per app.</value>
+  </data>
+  <data name="Privacy_Gate_Where_Heading" xml:space="preserve">
+    <value>Where it is stored</value>
+  </data>
+  <data name="Privacy_Gate_Where_Body" xml:space="preserve">
+    <value>Everything stays on this PC in %LOCALAPPDATA%\AppLedgerData. Nothing is uploaded. AppLedger has no accounts.</value>
+  </data>
+  <data name="Privacy_Gate_HowLong_Heading" xml:space="preserve">
+    <value>How long it is kept</value>
+  </data>
+  <data name="Privacy_Gate_HowLong_Body" xml:space="preserve">
+    <value>6 months by default. You can shorten it, pause, or delete everything in one click.</value>
+  </data>
+  <data name="Privacy_Gate_Who_Heading" xml:space="preserve">
+    <value>Who can see it</value>
+  </data>
+  <data name="Privacy_Gate_Who_Body" xml:space="preserve">
+    <value>Anyone who can log in as you on this PC. Protect your account accordingly.</value>
+  </data>
+  <data name="Privacy_Gate_ReadPolicy" xml:space="preserve">
+    <value>Read full policy</value>
+  </data>
+  <data name="Agent_Setup_Title" xml:space="preserve">
+    <value>The background Agent</value>
+  </data>
+  <data name="Agent_Setup_Body" xml:space="preserve">
+    <value>Network, disk and DNS figures need a small background service that runs with administrator rights and starts when you sign in. Installing it asks for permission once.</value>
+  </data>
+  <data name="Agent_Setup_Budget" xml:space="preserve">
+    <value>It stays under 1% CPU when idle and under 100 MB of memory.</value>
+  </data>
+  <data name="Agent_Setup_Install" xml:space="preserve">
+    <value>Install Agent</value>
+  </data>
+  <data name="Agent_Setup_Skip" xml:space="preserve">
+    <value>Continue in Lite mode</value>
+  </data>
+  <data name="Agent_Setup_Installed" xml:space="preserve">
+    <value>The Agent is installed and running.</value>
+  </data>
+  <data name="Agent_Setup_Declined" xml:space="preserve">
+    <value>Continuing without the Agent. You can install it later from Settings.</value>
+  </data>
+  <data name="Agent_Start" xml:space="preserve">
+    <value>Start Agent</value>
+  </data>
+  <data name="Defaults_Title" xml:space="preserve">
+    <value>Defaults</value>
+  </data>
+  <data name="Defaults_Retention" xml:space="preserve">
+    <value>Keep history for {0} days</value>
+    <comment>{0} = number of days</comment>
+  </data>
+  <data name="Defaults_Done" xml:space="preserve">
+    <value>Done</value>
+  </data>
   <data name="Col_App" xml:space="preserve">
     <value>App</value>
   </data>

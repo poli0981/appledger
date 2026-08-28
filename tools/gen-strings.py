@@ -41,6 +41,83 @@ STRINGS = {
         None,
     ),
 
+    # --- Onboarding. The English is verbatim from docs/12 §Privacy Gate: it is a product decision about
+    # what the user is told, not copy to be improved in passing.
+    "Onboarding_Step": ("Step {0} of {1}", "Bước {0} trên {1}", "ステップ {0} / {1}",
+        "{0} = current step number, {1} = total steps"),
+    "Onboarding_Continue": ("Continue", "Tiếp tục", "続ける", None),
+    "Onboarding_Back": ("Back", "Quay lại", "戻る", None),
+
+    "Privacy_Gate_Title": ("Before we start", "Trước khi bắt đầu", "始める前に", None),
+    "Privacy_Gate_What_Heading": ("What is recorded", "Những gì được ghi lại", "記録される内容", None),
+    "Privacy_Gate_What_Body": (
+        "AppLedger records which apps run, how much CPU/memory/disk/network they use, where they store "
+        "files, and - for most apps - which websites/hosts they talk to.",
+        "AppLedger ghi lại ứng dụng nào chạy, chúng dùng bao nhiêu CPU/bộ nhớ/đĩa/mạng, lưu tệp ở đâu, và "
+        "- với hầu hết ứng dụng - chúng liên lạc với website/máy chủ nào.",
+        "AppLedger は、どのアプリが実行され、CPU・メモリ・ディスク・ネットワークをどれだけ使用し、"
+        "ファイルをどこに保存し、（ほとんどのアプリについては）どのウェブサイトやホストと通信したかを記録します。",
+        None),
+    "Privacy_Gate_Browsers_Heading": ("Web browsers", "Trình duyệt web", "ウェブ ブラウザー", None),
+    "Privacy_Gate_Browsers_Body": (
+        "For web browsers we record only how much data they used, not which sites. You can change this per app.",
+        "Với trình duyệt web, chúng tôi chỉ ghi lượng dữ liệu đã dùng, không ghi trang nào. Bạn có thể đổi "
+        "điều này cho từng ứng dụng.",
+        "ウェブ ブラウザーについては、使用したデータ量のみを記録し、どのサイトかは記録しません。"
+        "これはアプリごとに変更できます。",
+        None),
+    "Privacy_Gate_Where_Heading": ("Where it is stored", "Lưu ở đâu", "保存場所", None),
+    "Privacy_Gate_Where_Body": (
+        r"Everything stays on this PC in %LOCALAPPDATA%\AppLedgerData. Nothing is uploaded. AppLedger has no accounts.",
+        r"Mọi thứ nằm trên máy này, trong %LOCALAPPDATA%\AppLedgerData. Không có gì được tải lên. "
+        "AppLedger không có tài khoản.",
+        r"すべてこの PC の %LOCALAPPDATA%\AppLedgerData に保存されます。アップロードは行われず、"
+        "AppLedger にアカウントはありません。",
+        None),
+    "Privacy_Gate_HowLong_Heading": ("How long it is kept", "Giữ trong bao lâu", "保持期間", None),
+    "Privacy_Gate_HowLong_Body": (
+        "6 months by default. You can shorten it, pause, or delete everything in one click.",
+        "Mặc định 6 tháng. Bạn có thể rút ngắn, tạm dừng, hoặc xoá tất cả chỉ bằng một cú nhấp.",
+        "既定では 6 か月です。短縮、一時停止、またはワンクリックですべて削除できます。",
+        None),
+    "Privacy_Gate_Who_Heading": ("Who can see it", "Ai xem được", "閲覧できる人", None),
+    "Privacy_Gate_Who_Body": (
+        "Anyone who can log in as you on this PC. Protect your account accordingly.",
+        "Bất kỳ ai đăng nhập được bằng tài khoản của bạn trên máy này. Hãy bảo vệ tài khoản tương xứng.",
+        "この PC にあなたとしてサインインできる人は誰でも閲覧できます。アカウントを適切に保護してください。",
+        None),
+    "Privacy_Gate_ReadPolicy": ("Read full policy", "Đọc chính sách đầy đủ", "ポリシー全文を読む", None),
+
+    "Agent_Setup_Title": ("The background Agent", "Agent chạy nền", "バックグラウンド エージェント", None),
+    "Agent_Setup_Body": (
+        "Network, disk and DNS figures need a small background service that runs with administrator rights "
+        "and starts when you sign in. Installing it asks for permission once.",
+        "Số liệu mạng, đĩa và DNS cần một dịch vụ nền nhỏ chạy với quyền quản trị và khởi động khi bạn đăng "
+        "nhập. Cài nó sẽ hỏi quyền một lần duy nhất.",
+        "ネットワーク、ディスク、DNS の数値には、管理者権限で動作しサインイン時に起動する小さな"
+        "バックグラウンド サービスが必要です。インストール時に一度だけ許可を求めます。",
+        None),
+    "Agent_Setup_Budget": (
+        "It stays under 1% CPU when idle and under 100 MB of memory.",
+        "Nó giữ dưới 1% CPU khi rảnh và dưới 100 MB bộ nhớ.",
+        "アイドル時は CPU 1% 未満、メモリ 100 MB 未満に収まります。",
+        None),
+    "Agent_Setup_Install": ("Install Agent", "Cài Agent", "エージェントをインストール", None),
+    "Agent_Setup_Skip": ("Continue in Lite mode", "Tiếp tục ở chế độ rút gọn", "ライト モードで続行", None),
+    "Agent_Setup_Installed": ("The Agent is installed and running.", "Agent đã cài và đang chạy.",
+        "エージェントがインストールされ、実行中です。", None),
+    "Agent_Setup_Declined": (
+        "Continuing without the Agent. You can install it later from Settings.",
+        "Tiếp tục không có Agent. Bạn có thể cài sau trong Cài đặt.",
+        "エージェントなしで続行します。後で設定からインストールできます。",
+        None),
+    "Agent_Start": ("Start Agent", "Khởi động Agent", "エージェントを開始", None),
+
+    "Defaults_Title": ("Defaults", "Mặc định", "既定値", None),
+    "Defaults_Retention": ("Keep history for {0} days", "Giữ lịch sử {0} ngày", "履歴を {0} 日間保持",
+        "{0} = number of days"),
+    "Defaults_Done": ("Done", "Xong", "完了", None),
+
     "Col_App": ("App", "Ứng dụng", "アプリ", None),
     "Col_Procs": ("Procs", "Tiến trình", "プロセス", "Column header: live process count for the app."),
     "Col_Cpu": ("CPU %", "CPU %", "CPU %", None),

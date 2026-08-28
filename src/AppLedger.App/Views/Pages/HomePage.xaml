@@ -6,6 +6,10 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="{Binding ViewModel.Title, Mode=OneWay}">
 
+    <Page.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </Page.Resources>
+
     <StackPanel Margin="{StaticResource PageMargin}">
         <TextBlock Style="{StaticResource PageTitleStyle}" Text="{Binding ViewModel.Title, Mode=OneWay}" />
 
@@ -20,7 +24,15 @@
             IsClosable="False"
             IsOpen="{Binding ViewModel.IsLite, Mode=OneWay}"
             Message="{x:Static res:Strings.Lite_Banner_Body}"
-            Severity="Informational" />
+            Severity="Informational">
+            <ui:InfoBar.Content>
+                <ui:Button
+                    Margin="0,8,0,0"
+                    Command="{Binding ViewModel.StartAgentCommand, Mode=OneWay}"
+                    Content="{x:Static res:Strings.Agent_Start}"
+                    Visibility="{Binding ViewModel.CanStartAgent, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+            </ui:InfoBar.Content>
+        </ui:InfoBar>
 
         <!--  Agent health strip: mode, cost, and one chip per sensor.  -->
         <ui:Card Margin="{StaticResource CardMargin}">

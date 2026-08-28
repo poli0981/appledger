@@ -43,9 +43,14 @@ public sealed class ApplicationHostService : IHostedService
 
         window.ShowWindow();
 
-        // Home is the landing page of docs/08_UI.md §Navigation. Navigating explicitly rather than relying
-        // on the first rail item keeps that a decision rather than an accident of ordering.
-        window.Navigate(typeof(HomePage));
+        // A first run goes to the Privacy Gate, not to Home. docs/02 §Core flow 1 makes that the first
+        // thing that happens, and only finishing it records that it was shown - so a run that is closed
+        // half-way through sees it again, which is the right way round for a screen the product owes the
+        // user (docs/12 §Privacy Gate).
+        var onboarded = (_services.GetService(typeof(AppSettingsStore)) as AppSettingsStore)?
+            .Load().OnboardingCompleted ?? true;
+
+        window.Navigate(onboarded ? typeof(HomePage) : typeof(OnboardingPage));
 
         if (_services.GetService(typeof(IAgentClient)) is IAgentClient client)
         {
