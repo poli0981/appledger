@@ -15,6 +15,11 @@
     <TieredPGO>true</TieredPGO>
   </PropertyGroup>
   <ItemGroup>
+    <!-- The task definition is embedded, not shipped as a file: the install folder is user-writable, and an
+         elevated process reading the definition it is about to register from there would be a real hole. -->
+    <EmbeddedResource Include="Tasks/AppLedgerAgentTask.xml" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\AppLedger.Core\AppLedger.Core.csproj" />
     <ProjectReference Include="..\AppLedger.Ipc\AppLedger.Ipc.csproj" />
     <ProjectReference Include="..\AppLedger.Collector\AppLedger.Collector.csproj" />

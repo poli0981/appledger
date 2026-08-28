@@ -89,6 +89,20 @@ Three things about writing this file are load-bearing, and each fails quietly ra
 | `--status` | no | prints task state + pipe reachability (used by UI and support) |
 | `--console` | yes (dev) | `--serve` with console logging, no mutex |
 
+**Exit codes.** `--status` is read by the UI, so its code is the machine-readable half and each value is a
+different decision rather than a shade of failure:
+
+| Code | Meaning | What the caller does |
+|---|---|---|
+| 0 | success; for `--status`, task installed **and** an Agent answering | nothing |
+| 1 | bad or missing command | print usage |
+| 3 | `--serve`: another Agent already holds the mutex | exit quietly; the other one is collecting |
+| 4 | the Agent could not start, or the task XML could not be written | show the error |
+| 5 | `schtasks` refused the create or delete | show it, and the path of the XML that was submitted |
+| 6 | the task was created but did not start | warn; it comes up at the next logon regardless |
+| 7 | `--status`: no task installed | offer Agent setup |
+| 8 | `--status`: task installed but nothing answering | offer to start it (`schtasks /Run`, no elevation) |
+
 ## Update flow
 
 1. UI checks GitHub Releases (`GithubSource(repoUrl, prerelease: settings.beta)`) on start and every 24 h; shows an
