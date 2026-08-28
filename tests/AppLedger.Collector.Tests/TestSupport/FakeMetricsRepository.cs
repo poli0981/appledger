@@ -81,6 +81,18 @@ internal sealed class FakeMetricsRepository : IMetricsRepository
 
         return Task.FromResult(result);
     }
+
+    /// <summary>Health minutes written, newest last.</summary>
+    internal List<HealthMinute> Health { get; } = [];
+
+    public Task WriteHealthAsync(HealthMinute minute, CancellationToken cancellationToken = default)
+    {
+        // Replace-by-minute, matching the primary key on the real table: a restart inside the same minute
+        // leaves one row for it, not two.
+        Health.RemoveAll(existing => existing.TsUtc == minute.TsUtc);
+        Health.Add(minute);
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>A process source that replays scripted snapshots, one per tick.</summary>

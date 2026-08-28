@@ -119,6 +119,36 @@ public sealed class MetricsRepository : IMetricsRepository
     }
 
     /// <inheritdoc />
+    public async Task WriteHealthAsync(HealthMinute minute, CancellationToken cancellationToken = default)
+    {
+        await using var connection = _factory.Open();
+
+        // Replace rather than insert: a restart inside the same minute must leave one row for it, not two.
+        // ts is the primary key, so the conflict target is implicit.
+        const string Sql = """
+            INSERT INTO health_minutes (ts, agent_cpu_pct, agent_ws, events_lost, sensors_json)
+            VALUES ($ts, $cpu, $ws, $lost, $sensors)
+            ON CONFLICT(ts) DO UPDATE SET
+                agent_cpu_pct = excluded.agent_cpu_pct,
+                agent_ws      = excluded.agent_ws,
+                events_lost   = excluded.events_lost,
+                sensors_json  = excluded.sensors_json;
+            """;
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            Sql,
+            new
+            {
+                ts = minute.TsUtc,
+                cpu = minute.AgentCpuPct,
+                ws = minute.AgentWs,
+                lost = minute.EventsLost,
+                sensors = minute.SensorsJson,
+            },
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<MetricRow>> ReadRangeAsync(
         AppId appId,
         MetricTier tier,

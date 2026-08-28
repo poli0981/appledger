@@ -104,4 +104,31 @@ public interface IMetricsRepository
         long fromTsUtc,
         long toTsUtc,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes one minute of the Agent's own cost and the collector's quiet losses, replacing any row for the
+    /// same minute (docs/06_DATA_MODEL.md <c>health_minutes</c>, docs/15_LOGGING.md §Agent self-watch).
+    /// </summary>
+    /// <remarks>
+    /// This is the durable half of the three health cadences, and the one S1 reads back after a 48-hour run.
+    /// Measuring the Agent through the mechanism it ships with is the point: a separate measuring path can
+    /// be right about a build that is wrong.
+    /// </remarks>
+    Task WriteHealthAsync(HealthMinute minute, CancellationToken cancellationToken = default);
 }
+
+/// <summary>One minute of Agent health, as stored (docs/06_DATA_MODEL.md <c>health_minutes</c>).</summary>
+/// <param name="TsUtc">The minute this describes, UTC epoch seconds.</param>
+/// <param name="AgentCpuPct">The hosting process's CPU over that minute, 0-100.</param>
+/// <param name="AgentWs">The hosting process's private working set, bytes.</param>
+/// <param name="EventsLost">Events the sensors reported losing, cumulative.</param>
+/// <param name="SensorsJson">
+/// Sensor states as JSON, so a new sensor needs no migration. Never a path or a hostname: this row is
+/// readable by anything that can open the database.
+/// </param>
+public readonly record struct HealthMinute(
+    long TsUtc,
+    double AgentCpuPct,
+    long AgentWs,
+    long EventsLost,
+    string? SensorsJson);
