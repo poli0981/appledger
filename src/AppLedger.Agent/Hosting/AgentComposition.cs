@@ -9,6 +9,7 @@ using AppLedger.Core.Time;
 using AppLedger.Infrastructure.Catalog;
 using AppLedger.Infrastructure.Etw;
 using AppLedger.Infrastructure.Gpu;
+using AppLedger.Infrastructure.Identity;
 using AppLedger.Infrastructure.Network;
 using AppLedger.Infrastructure.Platform;
 using AppLedger.Infrastructure.Policy;
@@ -27,6 +28,10 @@ namespace AppLedger.Agent.Hosting;
 /// <param name="CatalogVersion">The catalog that loaded, or null when none did.</param>
 /// <param name="CatalogVerified">Whether its signature verified.</param>
 /// <param name="SchemaVersion">The database schema version after migration.</param>
+/// <param name="Indexes">
+/// The identity indexes, so the worker can let them notice software installed while the Agent runs. Null
+/// when no catalog loaded and the stand-in resolver is in use, which reads no indexes at all.
+/// </param>
 public sealed record AgentRuntime(
     CollectorHost Collector,
     SqliteConnectionFactory Database,
@@ -35,7 +40,8 @@ public sealed record AgentRuntime(
     IReadOnlyList<ISensor> Sensors,
     string? CatalogVersion,
     bool CatalogVerified,
-    int SchemaVersion) : IDisposable
+    int SchemaVersion,
+    IIdentityIndexSource? Indexes = null) : IDisposable
 {
     /// <summary>Disposes the sensors that hold unmanaged resources.</summary>
     public void Dispose()
@@ -90,12 +96,17 @@ public static class AgentComposition
         var schemaVersion = new SchemaMigrator(database, root).Migrate();
         var repository = new MetricsRepository(database);
 
+        // Built eagerly, before the collector starts, and that order is the whole refresh story: everything
+        // already installed is indexed before the first process is resolved, so the periodic rebuild only
+        // ever has to notice software installed while the Agent runs - and such an app's processes start
+        // after the rebuild that finds it (docs/03_APP_IDENTITY.md §Caching & invalidation).
+        var indexes = new IdentityIndexSource(policy, folders, SystemClock.Instance);
+        indexes.BuildNow();
+
         // The real resolver needs the catalog; a rejected or missing one leaves the v0.2 stand-in, which
-        // still produces usable `root:` grouping rather than nothing (docs/13_CATALOG_RULES.md). The
-        // indexes are empty for now: the registry and launcher-manifest readers are the next slice, and
-        // until they exist the resolver still has host rules, catalog rules, package identity from the
-        // process itself, parent adoption and the install-root fallback - which is the difference between
-        // `cat:chrome` and one `root:` id for everything under %ProgramFiles%\Google.
+        // still produces usable `root:` grouping rather than nothing (docs/13_CATALOG_RULES.md).
+        // Overrides are empty: `app_overrides` is owned by the UI and arrives with the pickers later in
+        // v0.3, so there is nothing to read yet rather than something being skipped.
         var installRoots = new InstallRootHeuristic(InstallRootBoundaries.For(folders));
         IIdentityResolver resolver = catalog is null
             ? new FallbackIdentityResolver(policy, installRoots)
@@ -104,7 +115,7 @@ public static class AgentComposition
                 new EnvExpander(folders.CatalogVariables),
                 policy,
                 installRoots,
-                () => IdentityContext.Empty);
+                () => new IdentityContext(indexes.Current, []));
 
         var registry = new InstanceRegistry(policy, new ProcessEnricher(), resolver);
 
@@ -146,7 +157,8 @@ public static class AgentComposition
             sensors,
             catalogVersion,
             catalogVerified,
-            schemaVersion);
+            schemaVersion,
+            catalog is null ? null : indexes);
     }
 
     private static (CatalogDocument? Catalog, string? Version, bool Verified) LoadCatalog(

@@ -349,6 +349,44 @@ public sealed class IdentityFixtureTests
     }
 
     /// <summary>
+    /// What the shipping Agent produces, which is not what the gate measures. The collector resolves from
+    /// the process table and one limited handle, so a signer and PE metadata are absent — and most catalog
+    /// app rules name a signer, which AND-across-kinds makes mandatory.
+    /// </summary>
+    /// <remarks>
+    /// Written because the last claim this file made about the Agent turned out to be false, and the only
+    /// reason anyone found out was a test like this one. The numbers it pins are the real answer to "what
+    /// does AppLedger call Chrome today", and they are what docs/03 §What ships has to say.
+    /// </remarks>
+    [Fact]
+    public void Resolve_FromCollectorFacts_FallsBackPastEveryCatalogRuleThatNamesASigner()
+    {
+        var byName = Fixtures.ToDictionary(f => f.Name, StringComparer.Ordinal);
+
+        // Still right without a signer: an index keyed by path, a package the process carries itself, a
+        // host rule read off the command line, and the system fallbacks.
+        Expect("03_steam_game_anticheat", 6200, "steam:1091500");
+        Expect("04_windows_terminal", 7100, "msix:Microsoft.WindowsTerminal_8wekyb3d8bbwe");
+        Expect("06_svchost", 9100, "sys:service:Schedule");
+        Expect("08_vscode_git_node", 11103, "uninst:git-is1");
+        Expect("10_uwp_behind_frame_host", 13100, "sys:windows");
+
+        // And the ones that are not: Chrome's catalog rule names Google LLC, so without a signer it falls
+        // to the Uninstall entry that claims the same directory. A worse id, not a wrong one - and the
+        // confidence drops from 0.95 to 0.90 to say so.
+        var chrome = Resolve("01_chrome", 4100);
+        chrome.AppId.Value.ShouldBe("uninst:google-chrome");
+        chrome.Confidence.ShouldBe(Confidence.UninstallInstallLocation);
+
+        void Expect(string fixture, int pid, string id) =>
+            Resolve(fixture, pid).AppId.Value.ShouldBe(id, $"{fixture} pid {pid} from collector facts");
+
+        ResolutionResult Resolve(string fixture, int pid) =>
+            FixtureEnvironment.ResolveAllAsTheCollectorWould(byName[fixture])
+                .Single(r => r.Process.Pid == pid).Result;
+    }
+
+    /// <summary>
     /// <c>tierNeedsPromotion</c> is an admission that the code is behind the spec, so it has to be earned:
     /// the fixture claiming it must actually describe an anti-cheat driver or service, or the flag would be
     /// a way to excuse any tier miss at all.

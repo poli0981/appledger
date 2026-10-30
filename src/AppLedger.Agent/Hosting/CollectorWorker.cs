@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using AppLedger.Core.Collection;
+using AppLedger.Core.Identity;
 using AppLedger.Core.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -76,6 +77,8 @@ public sealed partial class CollectorWorker : BackgroundService
     /// <summary>One tick plus, on a minute boundary, one health row. Exposed so a test can drive it.</summary>
     public async Task TickOnceAsync(CancellationToken cancellationToken)
     {
+        RefreshIndexesIfDue();
+
         try
         {
             await _runtime.Collector.TickAsync(cancellationToken).ConfigureAwait(false);
@@ -89,6 +92,41 @@ public sealed partial class CollectorWorker : BackgroundService
         }
 
         await WriteHealthIfDueAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Lets the identity indexes notice software installed while the Agent runs. Cheap when nothing is due:
+    /// the interval lives behind <see cref="IIdentityIndexSource.Refresh"/>, so this is a clock compare on
+    /// all but one tick in ten minutes.
+    /// </summary>
+    /// <remarks>
+    /// It deliberately does <b>not</b> call <c>Invalidate()</c> on the resolver. That drops the cache the
+    /// resolver keys by <c>(pid, createTime)</c>, including the parent entries adoption reads, so
+    /// invalidating here would re-resolve children whose parents are no longer cached and lose grouping
+    /// rather than improve it. Nothing is missed by leaving it alone: every app installed before the Agent
+    /// started was in the eagerly built snapshot, and one installed afterwards has its processes resolved
+    /// after the refresh that found it (docs/03_APP_IDENTITY.md §Caching & invalidation).
+    /// </remarks>
+    private void RefreshIndexesIfDue()
+    {
+        if (_runtime.Indexes is not { } indexes)
+        {
+            return;
+        }
+
+        try
+        {
+            if (indexes.Refresh())
+            {
+                IndexesRebuilt(_logger);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Reading someone else's registry and manifest directories can fail in ways a monitor has no
+            // business dying from. A stale index resolves one step worse; a crash loses the day.
+            IndexRefreshFailed(_logger, ex.GetType().Name);
+        }
     }
 
     private async Task WriteHealthIfDueAsync(CancellationToken cancellationToken)
@@ -195,6 +233,18 @@ public sealed partial class CollectorWorker : BackgroundService
 
     [LoggerMessage(EventId = 1503, Level = LogLevel.Error, Message = "The final flush failed with {Error}")]
     private static partial void FlushFailed(ILogger logger, string error);
+
+    [LoggerMessage(
+        EventId = 1505,
+        Level = LogLevel.Information,
+        Message = "The identity indexes were rebuilt and changed")]
+    private static partial void IndexesRebuilt(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 1506,
+        Level = LogLevel.Warning,
+        Message = "Rebuilding the identity indexes failed with {Error}; the previous snapshot is still in use")]
+    private static partial void IndexRefreshFailed(ILogger logger, string error);
 
     [LoggerMessage(EventId = 1504, Level = LogLevel.Warning, Message = "Process priority was not lowered: {Error}")]
     private static partial void PriorityNotSet(ILogger logger, string error);

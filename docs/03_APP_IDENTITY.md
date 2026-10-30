@@ -78,12 +78,21 @@ debug level) so "why is this grouped here?" is answerable in the UI.
 and the S2 fixture half of the gate scores **55/55 (100 %)** with zero games merged into a launcher
 (`20_SPIKES.md` §S2). Three seams are open and each is visible rather than papered over:
 
-- **The indexes are empty in the shipping Agent.** Every step that reads one — launcher manifests (4), the Uninstall
-  registry (6), package managers (7) — is implemented and fixture-covered, but the adapters that *build*
-  `IdentityIndexes` from the registry and the manifest directories are the next slice. Until then the Agent resolves
-  through host rules, catalog rules, the package identity the process carries itself, parent adoption and the
-  install-root fallback. Concretely: Chrome, Discord, Steam and VS Code get their `cat:` ids; a Steam game gets
-  `root:` rather than `steam:<appid>`.
+- **The indexes are real as of the adapter slice.** `IdentityIndexSource` reads the Uninstall keys from all three
+  registry views, Steam's libraries and app manifests, Epic's `.item` manifests, GOG's registry entries, itch's
+  receipts, and the Scoop and Chocolatey layouts. It is built eagerly before the collector starts and rebuilt on an
+  interval — **not** on change notification as §Caching & invalidation asks; the deviation and its reasoning are in
+  `24_ADR.md`. Every path it stores goes through `PolicyGuard` and Tier-0 claims are dropped.
+- **No signer reaches the resolver, so most catalog app rules cannot match.** `InstanceRegistry` builds
+  `ProcessFacts` from the process table and one `PROCESS_QUERY_LIMITED_INFORMATION` handle: image name, image path,
+  command line, package family, parent, tier. Authenticode and PE metadata are read once per `(app_id, version)`
+  (§Metadata enrichment), which is *after* resolution — and `13_CATALOG_RULES.md` AND-s across match kinds, so a
+  rule naming a signer cannot match without one. Of the 17 shipped app rules, only `itch`, `obs` and `xbox` name no
+  signer. **What that means in practice, asserted by a test rather than assumed:** Chrome resolves to
+  `uninst:google-chrome` at confidence 0.90 rather than `cat:chrome` at 0.95; a Steam game gets `steam:<appid>`;
+  Windows Terminal gets `msix:…`; `svchost` gets `sys:service:<name>`; `git.exe` gets `uninst:git-is1`. Lower
+  precedence, not wrong — and the confidence says so. Closing it means a signer source the resolver can consult
+  lazily, cached per image path, which is its own piece of work.
 - **Lite mode still uses `FallbackIdentityResolver`**, because it loads no catalog, so it groups by install root
   where the Agent groups by catalog rule. `FallbackIdentityResolver` also remains the Agent's path when a catalog is
   missing or rejected — fewer rules, not a broken Agent.

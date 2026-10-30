@@ -12,7 +12,8 @@ public readonly record struct LiveInstance(
     ProcessKey Key,
     AppId AppId,
     ProcessTier Tier,
-    ResolutionResult Resolution);
+    ResolutionResult Resolution,
+    ProcessFacts Facts);
 
 /// <summary>
 /// Resolves each process instance to an app exactly once, and remembers the answer for the instance's
@@ -70,7 +71,13 @@ public sealed class InstanceRegistry
         }
 
         var resolved = new List<LiveInstance>(tick.Started.Count);
-        foreach (var start in tick.Started)
+
+        // Ascending create time, which is not how the snapshot arrives. Adoption and `attach_parent` read
+        // the parent's answer out of the resolver's cache, so a child resolved before its parent cannot be
+        // adopted - and on the first tick, or after a rebaseline, *every* live process arrives as a start,
+        // which is the whole process tree at once in NtQuerySystemInformation order
+        // (docs/24_ADR.md §Findings).
+        foreach (var start in tick.Started.OrderBy(s => s.Key.CreateTime))
         {
             resolved.Add(Add(start));
         }
@@ -90,23 +97,45 @@ public sealed class InstanceRegistry
     {
         _resolver.Invalidate();
 
-        // Re-resolving needs the facts, and the only cheap ones we still hold are in the cached results.
-        // Re-running enrichment here would mean a burst of handle opens, so the instances are re-resolved
-        // from what they already carry and the next process start picks up the new rules in full.
-        foreach (var key in _instances.Keys.ToList())
+        // Re-resolved from the facts each instance was first resolved with, in create-time order so the
+        // parent chain the resolver caches is rebuilt before any child asks for it. The facts are retained
+        // for exactly this. An earlier version rebuilt them from the *resolution* - display name as the
+        // image name, install root as the image path - which costs nothing with a resolver that reads only
+        // those two, and silently re-resolves everything to `root:` with one that matches on executable
+        // names, signers, command lines and parents (docs/24_ADR.md §Findings).
+        foreach (var key in _instances.Keys.OrderBy(k => k.CreateTime).ToList())
         {
             var previous = _instances[key];
-            var facts = new ProcessFacts
-            {
-                Key = key,
-                ImageFileName = previous.Resolution.DisplayName ?? string.Empty,
-                ImagePath = previous.Resolution.InstallRoot,
-                Tier = previous.Tier,
-            };
-
-            var resolution = _resolver.Resolve(facts);
+            var resolution = _resolver.Resolve(previous.Facts);
             _instances[key] = previous with { AppId = resolution.AppId, Resolution = resolution };
         }
+    }
+
+    /// <summary>
+    /// The live instance holding a pid, when it could be the parent of a process created at
+    /// <paramref name="child"/>. A snapshot carries only the parent's pid, and nothing may be keyed on a
+    /// bare pid - so the create-time test is the PID-reuse guard: if the real parent exited and an
+    /// unrelated process took its number, that process is not older than the child and is rejected here as
+    /// well as in the resolver.
+    /// </summary>
+    private ProcessKey? ParentKeyOf(int parentPid, ProcessKey child)
+    {
+        if (parentPid <= 0)
+        {
+            return null;
+        }
+
+        // A scan rather than a pid index: starts are a handful per tick against a few hundred instances,
+        // and a second structure to keep in step with exits is a correctness risk for no measurable gain.
+        foreach (var key in _instances.Keys)
+        {
+            if (key.Pid == parentPid && key.CouldBeParentOf(child))
+            {
+                return key;
+            }
+        }
+
+        return null;
     }
 
     private LiveInstance Add(in ProcessLifecycleEvent start)
@@ -135,11 +164,12 @@ public sealed class InstanceRegistry
             ImagePath = canonicalPath,
             CommandLine = enrichment.CommandLine,
             PackageFamilyName = enrichment.PackageFamilyName,
+            Parent = ParentKeyOf(start.ParentPid, start.Key),
             Tier = tier,
         };
 
         var resolution = _resolver.Resolve(facts);
-        var instance = new LiveInstance(start.Key, resolution.AppId, tier, resolution);
+        var instance = new LiveInstance(start.Key, resolution.AppId, tier, resolution, facts);
         _instances[start.Key] = instance;
         return instance;
     }
