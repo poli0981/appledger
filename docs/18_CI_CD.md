@@ -91,6 +91,14 @@ missed, so the PR cannot pass CI as it arrives. The fix is one command on the PR
 dotnet restore AppLedger.slnx --force-evaluate
 ```
 
+That command reaches 12 of the 13 lock files. `spikes/S1.EtwBudget` is deliberately outside `AppLedger.slnx`
+(`CLAUDE.md` §Solution layout), so its own lock file needs a second restore, and CI never validates its pins
+at all because CI only restores the solution:
+
+```powershell
+dotnet restore spikes/S1.EtwBudget/S1.EtwBudget.csproj --force-evaluate
+```
+
 Commit the regenerated lock files onto the Dependabot branch and merge. Do this **before** the first merge of
 a batch: two Dependabot PRs that both regenerate lock files will conflict, so merge one, rebase the next onto
 the new `main`, regenerate again, and only then merge it. Squash-merge either way — `main` requires linear

@@ -20,7 +20,7 @@
     <Copyright>Copyright © poli0981</Copyright>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/poli0981/appledger</RepositoryUrl>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
