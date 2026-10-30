@@ -180,13 +180,22 @@ jobs:
           # but a path the developer typed. The file-level scan flagged s1-report.py for connection-string
           # injection and path traversal "via faulty LLM-supplied CLI arguments", a premise that does not
           # hold for a reporting tool run by hand. This is a scope decision, not a severity one.
+          #
+          # sonar.coverage.exclusions names the files whose real coverage comes from Category=Admin tests
+          # that CI is documented to skip: the Agent CLI entry point, the schtasks wrapper, the ETW hub, and
+          # WPF code-behind that CLAUDE.md allows no logic in. Without them Sonar's default gate applies an
+          # 80 % new-code coverage rule to code that cannot be covered without elevation, and contradicts
+          # docs/18, where the 80 % gate is deliberately AppLedger.Core alone - "the part that decides what
+          # every number means, and it runs anywhere without privileges". Coverage only: these files are
+          # still analysed, and their issues are still reported.
           dotnet sonarscanner begin `
             /k:"poli0981_appledger" `
             /o:"poli0981" `
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
             /d:sonar.cs.vstest.reportsPaths="**/*.trx" `
-            /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs,spikes/**,tools/**"
+            /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs,spikes/**,tools/**" `
+            /d:sonar.coverage.exclusions="src/AppLedger.Agent/Program.cs,src/AppLedger.Agent/Tasks/SchTasks.cs,src/AppLedger.Infrastructure/Etw/EtwHub.cs,src/AppLedger.App/**/*.xaml.cs,src/AppLedger.App/App.xaml.cs"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           # TreatWarningsAsErrors is off for this build alone. `begin` injects SonarAnalyzer into the
