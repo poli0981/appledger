@@ -176,7 +176,8 @@ public sealed class StreamsTests
                 mutated[random.Next(mutated.Length)] = (byte)random.Next(256);
             }
 
-            AppsTick.Read(mutated, rows);
+            // The assertion is that this returns rather than throwing; the tick value is irrelevant here.
+            Should.NotThrow(() => AppsTick.Read(mutated, rows));
         }
     }
 

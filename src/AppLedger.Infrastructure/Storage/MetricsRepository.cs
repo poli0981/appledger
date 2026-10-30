@@ -26,6 +26,24 @@ public sealed class MetricsRepository : IMetricsRepository
         + "$io_read, $io_write, $disk_read, $disk_write, $disk_ops, $net_in, $net_out, $net_in_loopback, "
         + "$net_out_loopback, $threads, $handles, $hard_faults, $degraded";
 
+    // Half-open so consecutive ranges neither overlap nor leave a gap.
+    private const string RangeTail =
+        " WHERE app_id = $app_id AND ts >= $from AND ts < $to ORDER BY ts;";
+
+    // One compile-time statement per tier rather than one statement interpolated over a table name. The
+    // table name was never user input - it came from a closed switch over an enum - but a query assembled
+    // at run time has to be *argued* safe, and these are literals the compiler folds, so the set of
+    // reachable statements is something it checks instead. Values were always Dapper parameters and still
+    // are. INSERT OR REPLACE rather than INSERT: a rollup that runs twice for the same bucket must produce
+    // the same table, not a duplicate-key error and not two rows (docs/06_DATA_MODEL.md §Rollup jobs).
+    private const string InsertMinute = $"INSERT OR REPLACE INTO metrics_1m ({Columns}) VALUES ({Parameters});";
+    private const string InsertHour = $"INSERT OR REPLACE INTO metrics_1h ({Columns}) VALUES ({Parameters});";
+    private const string InsertDay = $"INSERT OR REPLACE INTO metrics_1d ({Columns}) VALUES ({Parameters});";
+
+    private const string SelectMinute = $"SELECT {Columns} FROM metrics_1m" + RangeTail;
+    private const string SelectHour = $"SELECT {Columns} FROM metrics_1h" + RangeTail;
+    private const string SelectDay = $"SELECT {Columns} FROM metrics_1d" + RangeTail;
+
     private readonly SqliteConnectionFactory _factory;
 
     /// <summary>Creates a repository over one database.</summary>
@@ -100,11 +118,11 @@ public sealed class MetricsRepository : IMetricsRepository
         }
 
         await using var connection = _factory.Open();
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = await connection
+            .BeginTransactionAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        // INSERT OR REPLACE rather than INSERT: a rollup that runs twice for the same bucket must produce
-        // the same table, not a duplicate-key error and not two rows (docs/06_DATA_MODEL.md §Rollup jobs).
-        var sql = $"INSERT OR REPLACE INTO {TableOf(tier)} ({Columns}) VALUES ({Parameters});";
+        var sql = InsertFor(tier);
 
         foreach (var row in rows)
         {
@@ -158,23 +176,27 @@ public sealed class MetricsRepository : IMetricsRepository
     {
         await using var connection = _factory.Open();
 
-        // Half-open so consecutive ranges neither overlap nor leave a gap.
-        var sql = $"SELECT {Columns} FROM {TableOf(tier)} "
-            + "WHERE app_id = $app_id AND ts >= $from AND ts < $to ORDER BY ts;";
-
         var rows = await connection.QueryAsync<MetricRowDto>(new CommandDefinition(
-            sql,
+            SelectFor(tier),
             new { app_id = appId.Value, from = fromTsUtc, to = toTsUtc },
             cancellationToken: cancellationToken)).ConfigureAwait(false);
 
         return [.. rows.Select(dto => dto.ToRow(appId))];
     }
 
-    private static string TableOf(MetricTier tier) => tier switch
+    private static string InsertFor(MetricTier tier) => tier switch
     {
-        MetricTier.Minute => "metrics_1m",
-        MetricTier.Hour => "metrics_1h",
-        MetricTier.Day => "metrics_1d",
+        MetricTier.Minute => InsertMinute,
+        MetricTier.Hour => InsertHour,
+        MetricTier.Day => InsertDay,
+        _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, "Unknown metric tier."),
+    };
+
+    private static string SelectFor(MetricTier tier) => tier switch
+    {
+        MetricTier.Minute => SelectMinute,
+        MetricTier.Hour => SelectHour,
+        MetricTier.Day => SelectDay,
         _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, "Unknown metric tier."),
     };
 

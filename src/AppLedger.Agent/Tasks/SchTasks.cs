@@ -70,11 +70,29 @@ public static class SchTasks
             : null;
     }
 
+    /// <summary>
+    /// The one executable this type will ever start, named absolutely so the policy is assertable rather
+    /// than disciplinary (the same reason no method here takes a task name).
+    /// </summary>
+    /// <remarks>
+    /// <c>FileName = "schtasks.exe"</c> with <c>UseShellExecute = false</c> goes to <c>CreateProcess</c>,
+    /// whose search order <b>begins with the directory of the calling executable</b> - and the Agent runs
+    /// from the Velopack <c>current\</c> folder, which is user-writable
+    /// (docs/11_SAFETY_POLICY.md §Privilege boundary). A <c>schtasks.exe</c> dropped beside
+    /// <c>AppLedger.Agent.exe</c> would therefore win, in a process running <c>HighestAvailable</c>.
+    /// <para>
+    /// The directory comes from the shell API rather than from <c>%SystemRoot%</c> so a poisoned
+    /// environment block cannot move it, which is the reasoning <c>KnownFolders</c> already states.
+    /// </para>
+    /// </remarks>
+    public static string ExecutablePath { get; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "schtasks.exe");
+
     private static SchTasksResult Run(params string[] arguments)
     {
         var info = new ProcessStartInfo
         {
-            FileName = "schtasks.exe",
+            FileName = ExecutablePath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
