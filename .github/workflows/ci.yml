@@ -172,17 +172,26 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          # The token is left in the environment rather than passed as /d:sonar.token=, which the scanner
+          # reads by itself. Nothing secret then appears in the command line this step echoes into the log.
+          # spikes/** is excluded belt-and-braces: it is outside AppLedger.slnx so the MSBuild scanner never
+          # compiles it, but the file-level scan would still index it as unanalysable C#.
           dotnet sonarscanner begin `
             /k:"poli0981_appledger" `
             /o:"poli0981" `
             /d:sonar.host.url="https://sonarcloud.io" `
-            /d:sonar.token="$env:SONAR_TOKEN" `
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
             /d:sonar.cs.vstest.reportsPaths="**/*.trx" `
-            /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs"
+            /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs,spikes/**"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          dotnet build AppLedger.slnx -c Release --no-restore --no-incremental
+          # TreatWarningsAsErrors is off for this build alone. `begin` injects SonarAnalyzer into the
+          # compilation, and Directory.Build.props turns every warning into an error - so Sonar's own rule
+          # set would decide whether the build survives long enough for `end` to upload anything, and a new
+          # Sonar rule would read as a compile failure. build-test is the job that enforces
+          # warnings-as-errors; this one reports, and must not be able to fail for having found something.
+          dotnet build AppLedger.slnx -c Release --no-restore --no-incremental `
+            -p:TreatWarningsAsErrors=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           dotnet test AppLedger.slnx -c Release --no-build `
@@ -191,4 +200,4 @@ jobs:
             --collect:"XPlat Code Coverage;Format=opencover"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          dotnet sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+          dotnet sonarscanner end
