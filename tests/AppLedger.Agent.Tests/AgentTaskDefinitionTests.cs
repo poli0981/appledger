@@ -202,4 +202,22 @@ public sealed class AgentTaskDefinitionTests
         parameters.ShouldNotContain("name");
         AgentTaskDefinition.TaskName.ShouldBe("AppLedger Agent");
     }
+
+    /// <summary>
+    /// A bare <c>"schtasks.exe"</c> is resolved by <c>CreateProcess</c>, whose search order <b>begins with
+    /// the directory of the calling executable</b> — and the Agent runs from the Velopack <c>current\</c>
+    /// folder, which is user-writable, while elevated (docs/11_SAFETY_POLICY.md §Privilege boundary). So a
+    /// <c>schtasks.exe</c> dropped beside <c>AppLedger.Agent.exe</c> would have won. Naming it absolutely
+    /// removes the question; asserting it here means the answer cannot drift back.
+    /// </summary>
+    [Fact]
+    public void SchTasks_NamesItsExecutableAbsolutely_AndInTheSystemDirectory()
+    {
+        var path = SchTasks.ExecutablePath;
+
+        Path.IsPathFullyQualified(path).ShouldBeTrue(path);
+        Path.GetFileName(path).ShouldBe("schtasks.exe");
+        Path.GetDirectoryName(path)
+            .ShouldBe(Environment.GetFolderPath(Environment.SpecialFolder.System));
+    }
 }

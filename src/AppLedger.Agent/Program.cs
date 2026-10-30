@@ -14,6 +14,13 @@ namespace AppLedger.Agent;
 /// <summary>
 /// Entry point for AppLedger.Agent.exe (docs/16_PACKAGING_AND_UPDATES.md §Agent CLI).
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Major Code Smell",
+    "S6966:Awaitable method should be used",
+    Justification = "The eleven sites are Console.Out/Error.WriteLine in a CLI whose entire output is a "
+        + "handful of lines. Console's writer is synchronized, so WriteLineAsync queues onto the same lock "
+        + "rather than avoiding it, and the synchronous write is what guarantees the line is out before the "
+        + "return value is. Awaiting it would add ceremony and buy nothing measurable.")]
 internal static class Program
 {
     /// <summary>
@@ -171,8 +178,16 @@ internal static class Program
 
     private static async Task<int> ServeAsync(bool withConsole, bool useMutex)
     {
-        using var single = useMutex ? new Mutex(initiallyOwned: false, SingleInstanceMutex, out _) : null;
-        if (single is not null && !single.WaitOne(TimeSpan.Zero))
+        // The named object's *existence* is the flag, and nothing is ever acquired or released. The obvious
+        // shape - WaitOne here, ReleaseMutex in the finally - cannot work in an async method: Mutex
+        // ownership is thread-affine, the finally runs after two ConfigureAwait(false) awaits, and so
+        // ReleaseMutex throws ApplicationException out of a finally and turns every clean shutdown into an
+        // unhandled exception with a non-zero exit code. Task Scheduler would record that as a failed task
+        // (docs/24_ADR.md §Findings). Asking CreateMutex whether we are the one who created it is atomic,
+        // thread-agnostic, and self-healing: a crashed Agent leaves no handle, so the next start proceeds.
+        var createdNew = true;
+        using var single = useMutex ? new Mutex(initiallyOwned: false, SingleInstanceMutex, out createdNew) : null;
+        if (!createdNew)
         {
             // Task Scheduler's MultipleInstancesPolicy is IgnoreNew, but a hand-started Agent can still
             // race the task. Exiting quietly is the right answer: the other instance is already collecting.
@@ -180,13 +195,16 @@ internal static class Program
             return 3;
         }
 
-        var dataRoot = DataRoot.Default;
-        dataRoot.EnsureCreated();
-
-        Log.Logger = AgentLogging.Create(dataRoot);
-
         try
         {
+            // Inside the try, not before it: a data root that cannot be created and a logger that cannot be
+            // opened are both startup failures, and the point of this handler is that a startup failure is
+            // reported as itself with exit code 4 rather than as an unhandled exception.
+            var dataRoot = DataRoot.Default;
+            dataRoot.EnsureCreated();
+
+            Log.Logger = AgentLogging.Create(dataRoot);
+
             using var loggerFactory = new SerilogLoggerFactory(Log.Logger);
 
             // Built before the host so a failure here - a corrupt database, a rejected catalog - is reported
@@ -223,8 +241,9 @@ internal static class Program
         }
         finally
         {
+            // No ReleaseMutex: nothing was acquired. The handle closing at process exit is what releases
+            // the named object, which is the lifetime "one Agent may collect at a time" actually means.
             await Log.CloseAndFlushAsync().ConfigureAwait(false);
-            single?.ReleaseMutex();
         }
     }
 }

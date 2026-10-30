@@ -234,8 +234,10 @@ public sealed class EnvelopeTests
                 mutated[random.Next(mutated.Length)] = (byte)random.Next(256);
             }
 
-            // The assertion is that this line returns rather than throwing; the value is irrelevant.
-            IpcEnvelope.TryReadHeader(mutated, out _);
+            // The assertion is that this returns rather than throwing; the value is irrelevant. Spelled
+            // out rather than left implicit, so the contract lives in the test and not only in the
+            // comment above it - and so a reader is not left wondering what is being checked.
+            Should.NotThrow(() => IpcEnvelope.TryReadHeader(mutated, out _));
         }
     }
 

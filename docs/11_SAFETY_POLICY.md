@@ -78,6 +78,14 @@ Build is x64/ARM64 only, so `System32` never silently redirects to `SysWOW64`.
 - The Agent binary lives in the Velopack `current\` folder (user-writable). Anyone who can replace it already runs as the
   user; the task does not grant cross-user access. A machine-wide install (v2) would close this by moving the binary to
   `Program Files` and the task to a `LocalService`/service model.
+- **Every process the Agent starts is named by an absolute path, resolved from the system directory — never through
+  `PATH`, and never by a bare file name.** `ProcessStartInfo.FileName` with `UseShellExecute = false` goes to
+  `CreateProcess`, whose search order *begins with the directory of the calling executable*, which is the user-writable
+  folder above. The directory comes from `Environment.SpecialFolder.System` rather than from `%SystemRoot%`, so a
+  poisoned environment block cannot move it either (the same reasoning `KnownFolders` uses). `SchTasks.ExecutablePath`
+  is the only such path today and is asserted by a test rather than left to spelling. This is defence in depth, not a
+  privilege boundary — UAC is not one, per the first bullet — but it costs nothing and removes the easiest way to turn
+  an elevated helper into someone else's code (`24_ADR.md` §Findings).
 - The pipe's DACL grants only the current user and `BUILTIN\Administrators`, carries a Medium mandatory label so the
   unelevated UI can connect at all, rejects remote clients, and both ends verify the peer's canonical image path
   (`07_IPC.md` §Transport, `24_ADR.md` ADR-17). No TCP listener exists anywhere in AppLedger.
