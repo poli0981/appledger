@@ -14,6 +14,13 @@ namespace AppLedger.Agent;
 /// <summary>
 /// Entry point for AppLedger.Agent.exe (docs/16_PACKAGING_AND_UPDATES.md §Agent CLI).
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Major Code Smell",
+    "S6966:Awaitable method should be used",
+    Justification = "The eleven sites are Console.Out/Error.WriteLine in a CLI whose entire output is a "
+        + "handful of lines. Console's writer is synchronized, so WriteLineAsync queues onto the same lock "
+        + "rather than avoiding it, and the synchronous write is what guarantees the line is out before the "
+        + "return value is. Awaiting it would add ceremony and buy nothing measurable.")]
 internal static class Program
 {
     /// <summary>

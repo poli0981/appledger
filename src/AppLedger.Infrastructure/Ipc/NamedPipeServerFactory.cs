@@ -160,6 +160,14 @@ public static class NamedPipeServerFactory
         return (nint)descriptor.Value;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S3869:SafeHandle.DangerousGetHandle should not be used",
+        Justification = "This is the ownership transfer itself, and the BCL offers no other way to do it: "
+            + "CsWin32 returns a SafeFileHandle, NamedPipeServerStream requires a SafePipeHandle, and the "
+            + "raw value is consumed in the same expression that wraps it while SetHandleAsInvalid on the "
+            + "next line retires the original without closing it. Nothing borrows a handle it does not "
+            + "own, and the double-close this shape avoids is ADR-7's Finding of 2026-08-27.")]
     private static unsafe SafePipeHandle CreateHandle(string fullName, int maxInstances, nint descriptor)
     {
         var attributes = new SECURITY_ATTRIBUTES

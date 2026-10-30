@@ -99,6 +99,13 @@ public sealed partial class EtwHub : IEtwSource, IDisposable
     public static bool CanCreateSessions => TraceEventSession.IsElevated() == true;
 
     /// <inheritdoc />
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S6966:Awaitable method should be used",
+        Justification = "The suggestion is to await StopAsync in the retry path instead of calling Stop. "
+            + "StopAsync calls Stop and then sets Health to Stopped - which is exactly what this catch "
+            + "block must not do while another attempt is pending, because the health state is how a "
+            + "caller tells a retry from a dead sensor. Taking the suggestion would publish a lie.")]
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         if (!CanCreateSessions)

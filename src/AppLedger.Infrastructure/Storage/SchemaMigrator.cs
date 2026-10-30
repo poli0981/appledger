@@ -41,6 +41,13 @@ public sealed class SchemaMigrator
     /// The database was written by a newer build. Downgrading a schema silently would corrupt history, so
     /// this refuses rather than guesses.
     /// </exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Code Smell",
+        "S2583:Conditionally executed code should be executed at least once",
+        Justification = "Correct, and unreachable only while CurrentVersion is 1: the two checks above " +
+            "leave current at 0, so the backup branch cannot run yet. It becomes live at schema 2, and " +
+            "deleting the only backup-before-upgrade path meanwhile is how a v2 migration eats six " +
+            "months of history.")]
     public int Migrate()
     {
         _dataRoot.EnsureCreated();

@@ -175,14 +175,18 @@ jobs:
           # The token is left in the environment rather than passed as /d:sonar.token=, which the scanner
           # reads by itself. Nothing secret then appears in the command line this step echoes into the log.
           # spikes/** is excluded belt-and-braces: it is outside AppLedger.slnx so the MSBuild scanner never
-          # compiles it, but the file-level scan would still index it as unanalysable C#.
+          # compiles it, but the file-level scan would still index it as unanalysable C#. tools/** is
+          # excluded for the same reason it exists - developer scripts, never shipped, never fed anything
+          # but a path the developer typed. The file-level scan flagged s1-report.py for connection-string
+          # injection and path traversal "via faulty LLM-supplied CLI arguments", a premise that does not
+          # hold for a reporting tool run by hand. This is a scope decision, not a severity one.
           dotnet sonarscanner begin `
             /k:"poli0981_appledger" `
             /o:"poli0981" `
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
             /d:sonar.cs.vstest.reportsPaths="**/*.trx" `
-            /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs,spikes/**"
+            /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs,spikes/**,tools/**"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           # TreatWarningsAsErrors is off for this build alone. `begin` injects SonarAnalyzer into the
