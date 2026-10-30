@@ -10,7 +10,7 @@
       "image": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
       "cmdline": "python.exe C:\\Work\\scraper.py --once",
       "signer": "Python Software Foundation",
-      "expect": "script:1f2e3d4c5b6a7988",
+      "expect": "script:<C:\\Work\\scraper.py>",
       "why": "first non-option argument with an extension becomes the identity"
     },
     {
@@ -20,7 +20,7 @@
       "image": "C:\\Users\\fixture\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
       "cmdline": "python.exe -m http.server 8000",
       "signer": "Python Software Foundation",
-      "expect": "script:99887766554433aa",
+      "expect": "script:<http.server>",
       "why": "-m module also yields a script identity, distinct from the file case"
     },
     {
@@ -32,7 +32,7 @@
       "signer": "Python Software Foundation",
       "productName": "Python",
       "companyName": "Python Software Foundation",
-      "expect": "root:5d4c3b2a19087766",
+      "expect": "root:<C:\\Users\\fixture\\AppData\\Local\\Programs\\Python>",
       "why": "no script argument: the runtime falls back to its own install root"
     }
   ]

@@ -2,6 +2,7 @@ using AppLedger.Core.Catalog;
 using AppLedger.Core.Identity;
 using Shouldly;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace AppLedger.Core.Tests.Identity;
 
@@ -17,6 +18,11 @@ namespace AppLedger.Core.Tests.Identity;
 /// </remarks>
 public sealed class IdentityFixtureTests
 {
+    private readonly ITestOutputHelper _output;
+
+    /// <summary>xUnit supplies the output sink; the S2 score is written to it on success too.</summary>
+    public IdentityFixtureTests(ITestOutputHelper output) => _output = output;
+
     private static IReadOnlyList<IdentityFixture> Fixtures => IdentityFixture.LoadAll();
 
     [Fact]
@@ -42,8 +48,9 @@ public sealed class IdentityFixtureTests
         {
             foreach (var process in fixture.Processes)
             {
-                AppId.TryParse(process.Expect, out _)
-                    .ShouldBeTrue($"{fixture.Name}: '{process.Expect}' is not a valid app id");
+                Should.NotThrow(
+                    () => process.ExpectedId(),
+                    $"{fixture.Name}: '{process.Expect}' is not an id the scheme can mint");
             }
         }
     }
@@ -147,11 +154,166 @@ public sealed class IdentityFixtureTests
     }
 
     /// <summary>
-    /// The S2 gate itself. Enabled when <c>IdentityResolver</c> exists (docs/21 v0.3); until then the
-    /// fixtures above keep the data valid so this becomes a red-to-green step rather than a rewrite.
+    /// The S2 gate itself (docs/20_SPIKES.md §S2): at least 95 % of the expected ids across the whole
+    /// fixture set.
     /// </summary>
-    [Fact(Skip = "S2 gate: enable with the IdentityResolver implementation (docs/21_ROADMAP.md v0.3).")]
+    /// <remarks>
+    /// The failure message lists every miss rather than only the percentage. A gate that says "86.5 %" and
+    /// stops has told the next person nothing about which scenario regressed, and docs/20 answers a failure
+    /// with "the resolver is redesigned" — which needs the cases, not the score.
+    /// </remarks>
+    [Fact]
     [Trait("Category", "S2")]
-    public void Resolve_MatchesAtLeastNinetyFivePercentOfExpectations() =>
-        throw new NotImplementedException("IIdentityResolver has no implementation yet.");
+    public void Resolve_MatchesAtLeastNinetyFivePercentOfExpectations()
+    {
+        var total = 0;
+        var matched = 0;
+        var misses = new List<string>();
+
+        foreach (var fixture in Fixtures)
+        {
+            foreach (var (process, result) in FixtureEnvironment.ResolveAll(fixture))
+            {
+                var expected = process.ExpectedId();
+                total++;
+
+                if (result.AppId == expected)
+                {
+                    matched++;
+                    continue;
+                }
+
+                misses.Add(
+                    $"  {fixture.Name} pid {process.Pid} ({process.ImageName}): "
+                    + $"expected {expected.Value}, got {result.AppId.Value} via {result.DecidedBy}");
+            }
+        }
+
+        var rate = total == 0 ? 0 : 100.0 * matched / total;
+
+        // Written on success as well as on failure: docs/20_SPIKES.md records S2 as a number, and a gate
+        // that only speaks up when it fails leaves nowhere to read that number from.
+        _output.WriteLine($"S2: {matched}/{total} expectations matched = {rate:N1} %");
+        foreach (var miss in misses)
+        {
+            _output.WriteLine(miss);
+        }
+
+        rate.ShouldBeGreaterThanOrEqualTo(
+            95.0,
+            $"S2 scored {matched}/{total} = {rate:N1} %{Environment.NewLine}"
+            + string.Join(Environment.NewLine, misses));
+    }
+
+    /// <summary>
+    /// The other half of the S2 pass criterion, and the one that is not a percentage: <b>zero</b> games
+    /// merged into their launcher. Checked on what the resolver produced, not on what the fixtures expect —
+    /// <see cref="Fixtures_NoGameIsExpectedToResolveIntoItsLauncher"/> already guards the expectations.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "S2")]
+    public void Resolve_NeverMergesAGameIntoItsLauncher()
+    {
+        foreach (var fixture in Fixtures)
+        {
+            var gameRoots = FixtureEnvironment.GameRootsOf(fixture);
+            if (gameRoots.Count == 0)
+            {
+                continue;
+            }
+
+            foreach (var (process, result) in FixtureEnvironment.ResolveAll(fixture))
+            {
+                if (process.Image is null
+                    || !gameRoots.Any(root => process.Image.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                FixtureEnvironment.LauncherAppIds.ShouldNotContain(
+                    result.AppId.Value,
+                    $"{fixture.Name}: pid {process.Pid} ({process.ImageName}) lives under a game root "
+                    + $"and was merged into {result.AppId.Value}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The confidence table of docs/03 §Confidence, where a fixture makes it the point. These numbers are
+    /// user-visible: below 0.60 the UI shows a "?" badge and offers "Assign to app…", so a resolver that
+    /// got the id right by a route that does not deserve 0.95 is still wrong.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "S2")]
+    public void Resolve_HonoursTheConfidenceTableWhereAFixtureAssertsIt()
+    {
+        foreach (var fixture in Fixtures)
+        {
+            foreach (var (process, result) in FixtureEnvironment.ResolveAll(fixture))
+            {
+                if (process.ExpectConfidence is not { } expected)
+                {
+                    continue;
+                }
+
+                result.Confidence.ShouldBe(
+                    expected,
+                    tolerance: 0.0001,
+                    $"{fixture.Name}: pid {process.Pid} ({process.ImageName}) resolved via {result.DecidedBy}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The zero-touch claim. A fixture that marks a process Tier 2 is asserting that the enrichment adapter
+    /// would never have called <c>OpenProcess</c> on it — the safety claim the whole anti-cheat story rests
+    /// on, so the gate checks it here rather than trusting that some other suite does
+    /// (docs/11_SAFETY_POLICY.md §Process access tiers).
+    /// </summary>
+    /// <remarks>
+    /// Entries flagged <c>tierNeedsPromotion</c> are excluded, because their Tier 2 comes from a signal no
+    /// pure function of a path carries: a protected game's own executable has no anti-cheat name and sits in
+    /// no anti-cheat directory, and what promotes it is a driver being loaded and a helper that starts after
+    /// it. That promotion is a collector mechanism and is not built yet (docs/24_ADR.md §Findings).
+    /// </remarks>
+    [Fact]
+    [Trait("Category", "S2")]
+    public void Policy_ClassifiesZeroTouchProcessesFromTheirPathAlone()
+    {
+        foreach (var fixture in Fixtures)
+        {
+            foreach (var process in fixture.Processes
+                .Where(p => p.ExpectTier is not null && !p.TierNeedsPromotion))
+            {
+                var tier = FixtureEnvironment.Policy.TierOfProcess(process.Image, process.ImageName);
+
+                ((int)tier).ShouldBe(
+                    process.ExpectTier!.Value,
+                    $"{fixture.Name}: pid {process.Pid} ({process.ImageName}) at {process.Image}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// <c>tierNeedsPromotion</c> is an admission that the code is behind the spec, so it has to be earned:
+    /// the fixture claiming it must actually describe an anti-cheat driver or service, or the flag would be
+    /// a way to excuse any tier miss at all.
+    /// </summary>
+    [Fact]
+    public void Fixtures_PromotionOnlyClaimedWhereAnAntiCheatSignalExists()
+    {
+        foreach (var fixture in Fixtures)
+        {
+            foreach (var process in fixture.Processes.Where(p => p.TierNeedsPromotion))
+            {
+                process.ExpectTier.ShouldBe(2, $"{fixture.Name}: pid {process.Pid} promotes to nothing");
+
+                (fixture.Indexes.LoadedDrivers.Count + fixture.Indexes.Services.Count)
+                    .ShouldBeGreaterThan(
+                        0,
+                        $"{fixture.Name}: pid {process.Pid} claims a promotion with no driver or service "
+                        + "in the fixture to promote it");
+            }
+        }
+    }
 }

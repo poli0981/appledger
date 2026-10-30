@@ -40,7 +40,7 @@
       "signer": "Microsoft Corporation",
       "parentPid": 7100,
       "parentCreateTime": 4000,
-      "expect": "script:6a5f1c2f2d3b4e77",
+      "expect": "script:<C:\\Work\\build.ps1>",
       "why": "script_from_cmdline: the script is the app, not the shell or the terminal"
     },
     {
@@ -52,7 +52,7 @@
       "signer": "Microsoft Windows",
       "parentPid": 7102,
       "parentCreateTime": 4004,
-      "expect": "script:6a5f1c2f2d3b4e77",
+      "expect": "script:<C:\\Work\\build.ps1>",
       "why": "conhost is attach_parent - it must NOT fall into the system rule first"
     }
   ]

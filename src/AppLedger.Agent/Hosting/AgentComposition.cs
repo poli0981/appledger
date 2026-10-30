@@ -90,9 +90,22 @@ public static class AgentComposition
         var schemaVersion = new SchemaMigrator(database, root).Migrate();
         var repository = new MetricsRepository(database);
 
-        var resolver = new FallbackIdentityResolver(
-            policy,
-            new InstallRootHeuristic(InstallRootBoundaries.For(folders)));
+        // The real resolver needs the catalog; a rejected or missing one leaves the v0.2 stand-in, which
+        // still produces usable `root:` grouping rather than nothing (docs/13_CATALOG_RULES.md). The
+        // indexes are empty for now: the registry and launcher-manifest readers are the next slice, and
+        // until they exist the resolver still has host rules, catalog rules, package identity from the
+        // process itself, parent adoption and the install-root fallback - which is the difference between
+        // `cat:chrome` and one `root:` id for everything under %ProgramFiles%\Google.
+        var installRoots = new InstallRootHeuristic(InstallRootBoundaries.For(folders));
+        IIdentityResolver resolver = catalog is null
+            ? new FallbackIdentityResolver(policy, installRoots)
+            : new IdentityResolver(
+                catalog,
+                new EnvExpander(folders.CatalogVariables),
+                policy,
+                installRoots,
+                () => IdentityContext.Empty);
+
         var registry = new InstanceRegistry(policy, new ProcessEnricher(), resolver);
 
         var etw = EtwHub.CanCreateSessions ? new EtwHub(loggerFactory.CreateLogger<EtwHub>()) : null;

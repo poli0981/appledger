@@ -61,12 +61,42 @@ Every step returns `(app_id?, confidence, evidence[])`. The first step that yiel
 step has strictly higher precedence (table above). Evidence is stored in `process_instances.identity_evidence` (JSON,
 debug level) so "why is this grouped here?" is answerable in the UI.
 
-**What v0.2 actually ships.** `FallbackIdentityResolver` implements steps **1 and 10 only** — Tier-0 paths to the
-`sys:*` family, everything else to `root:<hash of install root>` — because the resolver above is gated by spike S2 and
-lands at v0.3 with its fixture suite rather than ahead of it. The visible consequence is that the root fallback groups
-by whatever directory sits below the boundary, which for a vendor layout is the *vendor* folder: every product under
-`%ProgramFiles%\Google` shares one `root:` id until a catalog rule claims it. Confidences are honest about this — they
-are 0.30, below the prompt threshold, so the UI's "?" badge already offers "Assign to app…".
+**Two corrections the S2 fixtures forced on the order above** (`24_ADR.md` §Findings, 2026-10-30):
+
+1. **Step 1 is the last resort, not the first gate.** Host rules run before it, and so do the identity sources.
+   `conhost.exe` lives in `System32` and must still join the script its parent is running (fixture 4), and an MSIX
+   app under `%ProgramFiles%\WindowsApps` is a real app rather than part of Windows (fixtures 4 and 10) — that root
+   is Tier 0 so that nothing *scans* it. A Tier-0 path therefore yields `sys:windows` only once no rule and no index
+   has claimed the process, which is still where plain `notepad.exe` lands.
+2. **A catalog rule whose only criterion is `package_family` does not mint an id.** It cannot say anything
+   `msix:<PFN>` does not already say, and fixture 4 expects `msix:…Terminal`, not `cat:windows-terminal`. Such an
+   entry still supplies the category and the `helpers[]` list, so it is kept as the *matched* app — which is how
+   `OpenConsole.exe` joins the terminal and how the Xbox app is recognised as a Launcher for
+   `launcher_children` — and the losing id goes to `apps.aliases`.
+
+**What ships, and where the seams still are.** `IdentityResolver` implements the whole pipeline above as of v0.3,
+and the S2 fixture half of the gate scores **55/55 (100 %)** with zero games merged into a launcher
+(`20_SPIKES.md` §S2). Three seams are open and each is visible rather than papered over:
+
+- **The indexes are empty in the shipping Agent.** Every step that reads one — launcher manifests (4), the Uninstall
+  registry (6), package managers (7) — is implemented and fixture-covered, but the adapters that *build*
+  `IdentityIndexes` from the registry and the manifest directories are the next slice. Until then the Agent resolves
+  through host rules, catalog rules, the package identity the process carries itself, parent adoption and the
+  install-root fallback. Concretely: Chrome, Discord, Steam and VS Code get their `cat:` ids; a Steam game gets
+  `root:` rather than `steam:<appid>`.
+- **Lite mode still uses `FallbackIdentityResolver`**, because it loads no catalog, so it groups by install root
+  where the Agent groups by catalog rule. `FallbackIdentityResolver` also remains the Agent's path when a catalog is
+  missing or rejected — fewer rules, not a broken Agent.
+- **Tier-2 promotion of a protected game is not built.** `11_SAFETY_POLICY.md` §Process access tiers promotes "the
+  game process itself and its children while such a driver/service is present" on a 30-second re-evaluation; a
+  game's own executable carries no anti-cheat name and sits in no anti-cheat directory, and its helper starts *after*
+  it, so no pure function of a path can answer it. The anti-cheat helpers themselves are Tier 2 today. Fixture 3
+  marks the gap with `tierNeedsPromotion`.
+
+Where the root fallback is still what answers, it groups by whatever directory sits below the boundary, which for a
+vendor layout is the *vendor* folder: every product under `%ProgramFiles%\Google` shares one `root:` id until a
+catalog rule claims it. Confidence stays honest about that — 0.30, or 0.60 when PE metadata and a signature agree,
+both at or below the prompt threshold, so the UI's "?" badge offers "Assign to app…".
 
 ## Host rules (shipped in the catalog, `host_rules[]`)
 

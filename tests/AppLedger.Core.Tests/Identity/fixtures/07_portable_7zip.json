@@ -12,7 +12,7 @@
       "signer": "Igor Pavlov",
       "productName": "7-Zip",
       "companyName": "Igor Pavlov",
-      "expect": "root:04b1af0f70cbea01",
+      "expect": "root:<D:\\Tools>",
       "expectConfidence": 0.6,
       "why": "signer matches the catalog but install_root_glob does not, and match is AND across kinds"
     }

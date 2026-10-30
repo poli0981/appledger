@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AppLedger.Core.Identity;
 
 namespace AppLedger.Core.Tests.Identity;
 
@@ -160,11 +161,63 @@ public sealed record FixtureProcess
     /// <summary>PE <c>CompanyName</c>.</summary>
     public string? CompanyName { get; init; }
 
-    /// <summary>The `app_id` a correct resolver must produce.</summary>
+    /// <summary>
+    /// The `app_id` a correct resolver must produce, either written out (<c>cat:chrome</c>) or, for the two
+    /// hashed prefixes, as the **input** in angle brackets: <c>root:&lt;D:\Tools&gt;</c>,
+    /// <c>script:&lt;C:\Work\build.ps1&gt;</c>.
+    /// </summary>
+    /// <remarks>
+    /// The bracket form exists because the first draft of these fixtures carried hand-typed hex that was a
+    /// hash of nothing, so seven of the fifty-two expectations could never have matched and the gate could
+    /// not pass (docs/24_ADR.md §Findings). Writing the hash in instead would have been worse: it would make
+    /// the gate assert whatever the resolver produced. Naming the input keeps the claim human-authored and
+    /// human-checkable — "the install root of that image is `D:\Tools`" is something a reader can disagree
+    /// with — while <see cref="AppId"/> does the hashing it is already tested for.
+    /// </remarks>
     public required string Expect { get; init; }
+
+    /// <summary>
+    /// <see cref="Expect"/> as an id, hashing the bracket form. Throws rather than returning false, because
+    /// a fixture that names an id the scheme cannot mint is a broken fixture, not a failed expectation.
+    /// </summary>
+    public AppId ExpectedId()
+    {
+        var open = Expect.IndexOf('<', StringComparison.Ordinal);
+        if (open < 0)
+        {
+            return AppId.Parse(Expect);
+        }
+
+        var prefix = Expect[..open].TrimEnd(':');
+        var input = Expect[(open + 1)..].TrimEnd('>');
+
+        return prefix switch
+        {
+            "root" => AppId.Root(input),
+            "script" => AppId.Script(input),
+            _ => throw new FormatException(
+                $"'{Expect}' names an input for '{prefix}:', which is not one of the hashed prefixes."),
+        };
+    }
 
     /// <summary>Expected process tier, when the scenario is about zero-touch handling.</summary>
     public int? ExpectTier { get; init; }
+
+    /// <summary>
+    /// True when <see cref="ExpectTier"/> is only reachable through the dynamic promotion of
+    /// docs/11_SAFETY_POLICY.md §Process access tiers — "the game process itself and its children while
+    /// such a driver/service is present", re-evaluated every 30 s — rather than from the image path and
+    /// name alone.
+    /// </summary>
+    /// <remarks>
+    /// A protected game's own executable carries no anti-cheat name and sits in no anti-cheat directory;
+    /// what makes it Tier 2 is that an EAC driver is loaded and its helper is running, and the helper
+    /// starts *after* the game. No pure function of a path can answer that, so the promotion is a
+    /// collector mechanism and is not built yet. The flag lives here rather than as a pid in the test so
+    /// the gap is readable in the scenario it belongs to, and so it cannot quietly excuse a different miss:
+    /// <c>Fixtures_PromotionOnlyClaimedWhereAnAntiCheatSignalExists</c> checks that it is earned.
+    /// </remarks>
+    public bool TierNeedsPromotion { get; init; }
 
     /// <summary>Expected confidence, when the scenario is about the confidence table.</summary>
     public double? ExpectConfidence { get; init; }

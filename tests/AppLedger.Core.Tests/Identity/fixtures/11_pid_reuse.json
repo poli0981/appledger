@@ -41,7 +41,7 @@
       "parentPid": 14100,
       "parentCreateTime": 11000,
       "productName": "Updater",
-      "expect": "root:9c0d2b45e6f7a819",
+      "expect": "root:<D:\\Portable>",
       "why": "its recorded parent exited; adoption must not resurrect it through the recycled pid"
     }
   ]
