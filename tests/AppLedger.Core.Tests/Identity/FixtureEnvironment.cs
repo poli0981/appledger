@@ -103,6 +103,32 @@ internal static class FixtureEnvironment
         ];
     }
 
+    /// <summary>
+    /// The same fixture resolved the way the shipping Agent resolves today: catalog and host rules, package
+    /// identity from the process itself, adoption and the install-root fallback — but no indexes, because
+    /// the adapters that build them are the next slice (docs/03 §What ships).
+    /// </summary>
+    public static IReadOnlyList<(FixtureProcess Process, ResolutionResult Result)> ResolveAllWithEmptyIndexes(
+        IdentityFixture fixture)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+
+        var context = new IdentityContext(IdentityIndexes.Empty, OverridesOf(fixture));
+        var resolver = new IdentityResolver(
+            Catalog,
+            EnvExpander.ForValidation,
+            Policy,
+            new InstallRootHeuristic(Boundaries),
+            () => context);
+
+        return
+        [
+            .. fixture.Processes
+                .OrderBy(p => p.CreateTime)
+                .Select(p => (p, resolver.Resolve(FactsOf(p)))),
+        ];
+    }
+
     /// <summary>The <c>cat:</c> ids of every app the catalog calls a launcher.</summary>
     public static IReadOnlySet<string> LauncherAppIds { get; } =
         Catalog.Launchers.Select(id => "cat:" + id).ToHashSet(StringComparer.Ordinal);

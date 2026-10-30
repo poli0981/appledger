@@ -495,15 +495,18 @@ public sealed class IdentityResolver : IIdentityResolver
             return null;
         }
 
-        var underParentRoot = parent.InstallRoot is not null
-            && (PathRules.IsUnder(facts.ImagePath, parent.InstallRoot)
-                || PathRules.SamePath(installRoot, parent.InstallRoot));
-
-        // All three alternatives in docs/03 adoption rule 2 require the child to be under *some* root, and
-        // for a launcher the launcher root *is* the parent's install root - so the launcher clause adds no
-        // reach of its own, only the emphasis that a separate game root does not count. That part is
-        // already handled: a game has a manifest identity and never reaches adoption at all.
-        if (!underParentRoot)
+        // The test is that the child's *own* install root is the parent's, not that its image sits
+        // somewhere under it. The two read alike and differ on exactly the case this gate exists for: a
+        // Steam game lives inside the Steam folder, so "under the parent's install root" is true of a game
+        // as well as of a helper, and adoption would merge the game into its launcher. The install-root
+        // heuristic already treats `steamapps\common` as a boundary, so the game's own root is its own
+        // directory while `steamwebhelper.exe`, four levels down in `bin\cef\...`, still shares Steam's.
+        //
+        // This is what docs/03 adoption rule 2's launcher clause is protecting - "children under a game
+        // root resolve to the game, a game is never merged into its launcher" - and it has to hold whether
+        // or not the launcher manifest index happens to be populated, which is why it is a root comparison
+        // here rather than a consequence of the game having a manifest identity.
+        if (parent.InstallRoot is null || !PathRules.SamePath(installRoot, parent.InstallRoot))
         {
             return null;
         }

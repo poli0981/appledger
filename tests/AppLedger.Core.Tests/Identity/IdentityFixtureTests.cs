@@ -222,18 +222,29 @@ public sealed class IdentityFixtureTests
                 continue;
             }
 
-            foreach (var (process, result) in FixtureEnvironment.ResolveAll(fixture))
-            {
-                if (process.Image is null
-                    || !gameRoots.Any(root => process.Image.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
-                {
-                    continue;
-                }
+            // Both fidelities. With the manifest index a game has an identity of its own and never reaches
+            // adoption at all, so checking only that configuration would have proved nothing about the one
+            // the Agent actually ships with: resolved with empty indexes, the game was adopted into
+            // `cat:steam` because it lives inside the Steam folder (docs/24_ADR.md §Findings).
+            Check(FixtureEnvironment.ResolveAll(fixture), "with indexes");
+            Check(FixtureEnvironment.ResolveAllWithEmptyIndexes(fixture), "with empty indexes");
 
-                FixtureEnvironment.LauncherAppIds.ShouldNotContain(
-                    result.AppId.Value,
-                    $"{fixture.Name}: pid {process.Pid} ({process.ImageName}) lives under a game root "
-                    + $"and was merged into {result.AppId.Value}");
+            void Check(
+                IReadOnlyList<(FixtureProcess Process, ResolutionResult Result)> resolved, string fidelity)
+            {
+                foreach (var (process, result) in resolved)
+                {
+                    if (process.Image is null
+                        || !gameRoots.Any(r => process.Image.StartsWith(r, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+
+                    FixtureEnvironment.LauncherAppIds.ShouldNotContain(
+                        result.AppId.Value,
+                        $"{fixture.Name} {fidelity}: pid {process.Pid} ({process.ImageName}) lives under a "
+                        + $"game root and was merged into {result.AppId.Value}");
+                }
             }
         }
     }
@@ -291,6 +302,49 @@ public sealed class IdentityFixtureTests
                     process.ExpectTier!.Value,
                     $"{fixture.Name}: pid {process.Pid} ({process.ImageName}) at {process.Image}");
             }
+        }
+    }
+
+    /// <summary>
+    /// What the shipping Agent actually does today, which is not what the fixtures measure. Its
+    /// <c>IdentityIndexes</c> are empty until the registry and manifest readers land, so every expectation
+    /// that depends on an index must degrade — and everything that does not must be unaffected.
+    /// </summary>
+    /// <remarks>
+    /// docs/03 §What ships makes a specific claim about this ("Chrome, Discord, Steam and VS Code get their
+    /// `cat:` ids; a Steam game gets `root:` rather than `steam:&lt;appid&gt;`"). A claim in a doc that no
+    /// test holds is a claim that goes stale the first time someone changes the pipeline, so it is asserted
+    /// here instead of trusted.
+    /// </remarks>
+    [Fact]
+    public void Resolve_WithEmptyIndexes_KeepsCatalogIdentityAndLosesOnlyIndexIdentity()
+    {
+        var byName = Fixtures.ToDictionary(f => f.Name, StringComparer.Ordinal);
+
+        Expect("01_chrome", 4100, "cat:chrome");
+        Expect("02_discord", 5100, "cat:discord");
+        Expect("03_steam_game_anticheat", 6100, "cat:steam");
+        Expect("08_vscode_git_node", 11100, "cat:vscode");
+
+        // Package identity comes from the process, not from an index, so it survives.
+        Expect("04_windows_terminal", 7100, "msix:Microsoft.WindowsTerminal_8wekyb3d8bbwe");
+
+        // And the two that genuinely depend on an index degrade, each to the honest answer rather than to
+        // the launcher's id - which is the one thing the gate will not tolerate at any index fidelity.
+        var game = Resolve("03_steam_game_anticheat", 6200);
+        game.AppId.Value.ShouldStartWith("root:", Case.Sensitive, "a Steam game without the manifest index");
+        FixtureEnvironment.LauncherAppIds.ShouldNotContain(game.AppId.Value);
+
+        Resolve("08_vscode_git_node", 11103).AppId.Value
+            .ShouldStartWith("root:", Case.Sensitive, "git.exe without the uninstall index");
+
+        void Expect(string fixture, int pid, string id) =>
+            Resolve(fixture, pid).AppId.Value.ShouldBe(id, $"{fixture} pid {pid} with empty indexes");
+
+        ResolutionResult Resolve(string fixture, int pid)
+        {
+            var resolved = FixtureEnvironment.ResolveAllWithEmptyIndexes(byName[fixture]);
+            return resolved.Single(r => r.Process.Pid == pid).Result;
         }
     }
 
