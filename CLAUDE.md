@@ -42,7 +42,7 @@ This file is the entry point for any AI session working in this repo. Read it fu
 | Packaging | Velopack 1.2.0, one package, two exes, per-user install | `docs/16_PACKAGING_AND_UPDATES.md` |
 | Catalog | Signed JSON rules (minisign/Ed25519 via NSec) | `docs/13_CATALOG_RULES.md` |
 | Tests | xUnit + NSubstitute; `Category=Admin` tests excluded on CI | `docs/19_TESTING.md` |
-| CI/CD | Caller stubs → `poli0981/.github` reusable workflows, explicit `permissions:` | `docs/18_CI_CD.md` |
+| CI/CD | Four self-contained workflows in this repo (the caller-stub design was reverted at kickoff), explicit `permissions:`, SonarCloud via the MSBuild scanner | `docs/18_CI_CD.md` |
 
 ## Solution layout (`AppLedger.slnx`)
 

@@ -110,8 +110,85 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # The platform belongs on the restore as well, not only on the build. The win-arm64 apphost pack is
+      # acquired during restore, so a restore that ran for x64 leaves the ARM64 build with no apphost.exe to
+      # copy and it fails with MSB3030. It only started failing when the SDK moved far enough forward to pick
+      # the apphost by PlatformTarget. Lock files are unaffected: apphost packs arrive as PackageDownload and
+      # no packages.lock.json in the repo names a Host.win* entry, which is also why x64 was always fine.
       - name: Restore (locked mode)
-        run: dotnet restore AppLedger.slnx --locked-mode
+        run: dotnet restore AppLedger.slnx --locked-mode -p:Platform=ARM64
 
       - name: Build
         run: dotnet build AppLedger.slnx -c Release -p:Platform=ARM64 --no-restore
+
+  # SonarCloud. The project started on Automatic Analysis, which cannot import coverage and reads sources
+  # without a compilation; the MSBuild scanner wraps a real build instead, so the C# analyzer sees what the
+  # compiler saw. It builds and tests in its own job on purpose - `begin` writes the .sonarqube directory and
+  # the targets file the build has to pick up, so the work cannot be borrowed from build-test. Deliberately
+  # NOT a required status check: an outage at Sonar must not be able to block a merge.
+  sonar:
+    name: SonarCloud
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    # Dependabot and fork pull requests are not given secrets, so the scan would fail on every one of them
+    # for a reason that is not a defect. The check is absent on those PRs by design (docs/18_CI_CD.md).
+    if: >-
+      github.actor != 'dependabot[bot]'
+      && (github.event_name != 'pull_request'
+      || github.event.pull_request.head.repo.full_name == github.repository)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Sonar decides what counts as new code from git blame, and a shallow clone carries none.
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      # The scanner is a .NET tool that shells out to a JRE, so one has to be on the runner.
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install the scanner
+        run: dotnet tool install --global dotnet-sonarscanner --version 12.0.0
+
+      - name: Restore (locked mode)
+        run: dotnet restore AppLedger.slnx --locked-mode
+
+      # One step, because the three commands are one transaction: `begin` prepares the build hooks, the build
+      # and test runs produce the analysis and the reports, and `end` uploads what they produced. Coverage is
+      # OpenCover here because that is the format Sonar's C# plugin reads; build-test keeps collecting
+      # Cobertura for the 80 % gate, so the two never fight over one file.
+      - name: Analyze
+        shell: pwsh
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin `
+            /k:"poli0981_appledger" `
+            /o:"poli0981" `
+            /d:sonar.host.url="https://sonarcloud.io" `
+            /d:sonar.token="$env:SONAR_TOKEN" `
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
+            /d:sonar.cs.vstest.reportsPaths="**/*.trx" `
+            /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          dotnet build AppLedger.slnx -c Release --no-restore --no-incremental
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          dotnet test AppLedger.slnx -c Release --no-build `
+            --filter "Category!=Admin&Category!=Manual" `
+            --logger "trx;LogFileName=test-results.trx" `
+            --collect:"XPlat Code Coverage;Format=opencover"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          dotnet sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
