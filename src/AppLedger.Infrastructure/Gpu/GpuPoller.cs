@@ -329,6 +329,14 @@ public sealed class GpuPoller : IGpuSource, IDisposable
     /// clear, which is a promise the type cannot keep. Passing a value the caller already null-checked
     /// under the lock makes the promise one the compiler checks.
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Major Bug",
+        "S3869:SafeHandle.DangerousGetHandle should not be used",
+        Justification = "PDH entry points take a raw PDH_HQUERY, so there is no overload to prefer. What the "
+            + "rule warns about is the handle being closed under the call, and that is what the lock "
+            + "removes: every caller holds _gate, and StopCore - the only thing that disposes the query - "
+            + "takes the same lock, so a close cannot interleave with a use. This suppression was "
+            + "deliberately withheld while that was not true (docs/24_ADR.md, 2026-10-30).")]
     private static PDH_HQUERY QueryHandle(PdhCloseQuerySafeHandle query) =>
         new(query.DangerousGetHandle());
 
