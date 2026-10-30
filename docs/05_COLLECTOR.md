@@ -159,6 +159,15 @@ calls so the steady state allocates only the image-name strings. At the default 
 inside the < 1 % budget, and the figure is reproduced by
 `NtProcessSourceTests.Snapshot_PollCost_IsReportedForTheBudgetNote` rather than being a claim.
 
+Locking the GPU poller (2026-10-30) costs **nothing measurable on the tick path**. Every use of the raw PDH
+query handle moved inside one `Lock`, which the collector thread takes uncontended once per `Sample` - a few
+nanoseconds against a read that is milliseconds - and the lock object is one allocation for the life of the
+poller. What it can cost is shutdown: `Dispose` and `StopAsync` now wait for an in-flight read, bounded by one
+sample. That was the point of choosing a lock over refcounting the handle, which would have let "the sensor has
+stopped" return while PDH was still reading. The empty-sample path stopped allocating on the way through: it
+returns a cached empty list rather than a new one, which matters because a machine with no GPU counters takes
+that path every two seconds for the whole run.
+
 The sensor join (2026-08-28) adds **no allocation to the tick path**: `InstanceExtras` is an 80-byte struct passed
 by `in`/`out`, the GPU readings live in one dictionary reused and cleared every two seconds, and the take methods
 return structs. Both numbers are pinned by tests —

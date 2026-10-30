@@ -22,6 +22,17 @@ namespace AppLedger.Infrastructure.Gpu;
 /// <b>Cost.</b> The wildcard expansion is the expensive part — roughly 5 ms per 100 instances — so docs/05
 /// §Budget controls caps it at once every 10 seconds even though the sample itself runs every 2.
 /// </para>
+/// <para>
+/// <b>One lock, and every raw handle use is inside it.</b> PDH entry points take a raw <c>PDH_HQUERY</c>, so
+/// the query's lifetime has to be held still across a call — and <see cref="Sample"/> runs on the collector
+/// thread while <see cref="StopAsync"/> and <see cref="Dispose"/> are the host's shutdown path on another.
+/// Without the lock there were two ways to lose: the null check on the handle field and the call that used
+/// it were separate statements, so a stop in between threw a <c>NullReferenceException</c>; and a stop
+/// during a call closed the query under PDH, which is a use-after-close on a handle the OS may already have
+/// recycled. Refcounting the handle with <c>DangerousAddRef</c> would have closed the second hole only, and
+/// would have let "the sensor has stopped" return while a PDH call was still in flight. A lock closes both
+/// and costs a shutdown at most one sample, which is milliseconds (docs/24_ADR.md §Findings).
+/// </para>
 /// </remarks>
 public sealed class GpuPoller : IGpuSource, IDisposable
 {
@@ -39,6 +50,9 @@ public sealed class GpuPoller : IGpuSource, IDisposable
     private const uint PdhCstatusNoObject = 0xC0000BB8;
     private const uint PdhCstatusNoCounter = 0xC0000BB9;
 
+    /// <summary>Guards every use of the raw query handle; see the remarks on the type.</summary>
+    private readonly Lock _gate = new();
+
     private PdhCloseQuerySafeHandle? _query;
     private PDH_HCOUNTER _utilization;
     private PDH_HCOUNTER _dedicated;
@@ -54,37 +68,47 @@ public sealed class GpuPoller : IGpuSource, IDisposable
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
+        lock (_gate)
+        {
+            Start();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void Start()
+    {
         try
         {
             if (PInvoke.PdhOpenQuery(null, 0, out var query) != PdhSuccess)
             {
                 Health = SensorHealth.Unavailable("PdhOpenQuery failed");
-                return Task.CompletedTask;
+                return;
             }
 
             _query = query;
 
-            if (!TryAddCounter(UtilizationPath, out _utilization))
+            if (!TryAddCounter(query, UtilizationPath, out _utilization))
             {
                 // No GPU Engine counter set: an old driver, a VM, or a server SKU. Expected on plenty of
                 // real machines, so it is reported rather than retried.
-                Stop();
+                StopCore();
                 Health = SensorHealth.Unavailable("no GPU counters");
-                return Task.CompletedTask;
+                return;
             }
 
             // Memory counters are a bonus: a machine can expose engine utilization without them, and losing
             // VRAM numbers is not a reason to lose GPU percentage too.
-            TryAddCounter(DedicatedPath, out _dedicated);
-            TryAddCounter(SharedPath, out _shared);
+            TryAddCounter(query, DedicatedPath, out _dedicated);
+            TryAddCounter(query, SharedPath, out _shared);
 
             // Utilization is a rate, and a rate needs two collections before it means anything. The first
             // one happens here so the first Sample the collector asks for is already valid.
-            if (PInvoke.PdhCollectQueryData(QueryHandle()) != PdhSuccess)
+            if (PInvoke.PdhCollectQueryData(QueryHandle(query)) != PdhSuccess)
             {
-                Stop();
+                StopCore();
                 Health = SensorHealth.Unavailable("PdhCollectQueryData failed");
-                return Task.CompletedTask;
+                return;
             }
 
             _collectedOnce = true;
@@ -99,38 +123,67 @@ public sealed class GpuPoller : IGpuSource, IDisposable
         {
             Health = SensorHealth.Unavailable("pdh entry point missing");
         }
-
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public Task StopAsync(CancellationToken cancellationToken = default)
     {
-        Stop();
-        Health = SensorHealth.Stopped;
+        lock (_gate)
+        {
+            StopCore();
+            Health = SensorHealth.Stopped;
+        }
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public void Dispose() => Stop();
+    /// <remarks>
+    /// Takes the same lock as <see cref="Sample"/>, so it waits for an in-flight read rather than
+    /// closing the query underneath one. That is the point: when this returns, nothing is still
+    /// reading PDH.
+    /// </remarks>
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            StopCore();
+        }
+    }
 
     /// <inheritdoc />
     public IReadOnlyList<GpuSample> Sample()
     {
-        if (_query is null || !Health.IsRunning || !_collectedOnce)
+        lock (_gate)
         {
-            return [];
+            // Null rather than an empty list for the nothing-to-report paths, which are the common ones on a
+            // machine with no GPU counters: an empty collection expression on an array target is the cached
+            // Array.Empty, while one on a List allocates - every two seconds, for the whole run.
+            return SampleLocked() ?? Nothing;
+        }
+    }
+
+    private static IReadOnlyList<GpuSample> Nothing { get; } = [];
+
+    private List<GpuSample>? SampleLocked()
+    {
+        // The null check and the use of the handle have to sit in one critical section with the stop.
+        // As two separate statements they were a NullReferenceException waiting for a shutdown to land
+        // between them, and the local keeps them together by construction rather than by care.
+        if (_query is not { } query || !Health.IsRunning || !_collectedOnce)
+        {
+            return null;
         }
 
-        if (PInvoke.PdhCollectQueryData(QueryHandle()) != PdhSuccess)
+        if (PInvoke.PdhCollectQueryData(QueryHandle(query)) != PdhSuccess)
         {
-            return [];
+            return null;
         }
 
         var utilization = ReadCounter(_utilization);
         if (utilization.Count == 0)
         {
-            return [];
+            return null;
         }
 
         var dedicated = ReadCounter(_dedicated);
@@ -242,7 +295,8 @@ public sealed class GpuPoller : IGpuSource, IDisposable
         return !digits.IsEmpty && int.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out pid);
     }
 
-    private bool TryAddCounter(string path, out PDH_HCOUNTER counter)
+    private static bool TryAddCounter(
+        PdhCloseQuerySafeHandle query, string path, out PDH_HCOUNTER counter)
     {
         counter = default;
 
@@ -252,7 +306,7 @@ public sealed class GpuPoller : IGpuSource, IDisposable
             {
                 PDH_HCOUNTER handle;
                 var status = PInvoke.PdhAddEnglishCounter(
-                    QueryHandle(), p, 0, &handle);
+                    QueryHandle(query), p, 0, &handle);
 
                 if (status is PdhCstatusNoObject or PdhCstatusNoCounter || status != PdhSuccess)
                 {
@@ -266,12 +320,20 @@ public sealed class GpuPoller : IGpuSource, IDisposable
     }
 
     /// <summary>
-    /// The raw query handle the PDH entry points want. The SafeHandle owns the lifetime; this only borrows
-    /// it for the duration of a call that cannot outlive the enclosing method.
+    /// The raw query handle the PDH entry points want. The SafeHandle owns the lifetime and the caller
+    /// holds <see cref="_gate"/>, so the handle cannot be closed while the call using it is in flight.
     /// </summary>
-    private PDH_HQUERY QueryHandle() => new(_query!.DangerousGetHandle());
+    /// <remarks>
+    /// It takes the query rather than reading the field, and that is the whole reason it is safe to
+    /// call. The old form was <c>_query!</c> - a null-forgiving operator on a field another thread can
+    /// clear, which is a promise the type cannot keep. Passing a value the caller already null-checked
+    /// under the lock makes the promise one the compiler checks.
+    /// </remarks>
+    private static PDH_HQUERY QueryHandle(PdhCloseQuerySafeHandle query) =>
+        new(query.DangerousGetHandle());
 
-    private void Stop()
+    /// <summary>Closes the query. The caller must hold <see cref="_gate"/>.</summary>
+    private void StopCore()
     {
         _query?.Dispose();
         _query = null;

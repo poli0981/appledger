@@ -98,6 +98,74 @@ public sealed class GpuPollerTests
     public void Dispose_WithoutStarting_IsSafe() => Should.NotThrow(() => new GpuPoller().Dispose());
 
     /// <summary>
+    /// Sampling and shutdown land on different threads — <c>StopAsync</c> and <c>Dispose</c> are the host's
+    /// path, <see cref="GpuPoller.Sample"/> is the collector's — so neither may fault when they overlap,
+    /// and a poller that has been disposed must answer rather than throw.
+    /// </summary>
+    /// <remarks>
+    /// <b>This test does not reproduce the data race it was written for, and no test can.</b> It was tried:
+    /// against the pre-lock code it passed five times out of five. The window was two instructions wide —
+    /// the null check on the handle field and the call that used it — while <c>Sample</c> spends
+    /// milliseconds inside PDH, so the odds of a stop landing between them are nil, and once the field is
+    /// cleared every later iteration returns early, so there is exactly one chance per run. Repetition does
+    /// not help a window that narrow. The fix is therefore established by construction and review rather
+    /// than by a test: one lock, and every use of the raw handle inside it (docs/24_ADR.md §Findings).
+    /// <para>
+    /// What this does catch is a regression in the contract either side of the race: concurrent sampling
+    /// and disposal must not fault, and a disposed poller must report nothing rather than throwing — which
+    /// is what the collector tick depends on at shutdown. On a machine with no GPU counters it exercises
+    /// the early-out instead; the state goes to output so a reader can tell which happened.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Sample_AndDisposeFromAnotherThread_NeitherFaults()
+    {
+        var poller = new GpuPoller();
+        await poller.StartAsync();
+
+        _output.WriteLine($"GPU counters: {poller.Health.State} ({poller.Health.Detail ?? "-"})");
+
+        Exception? sampling = null;
+        using var stopping = new CancellationTokenSource();
+
+        var reader = new Thread(() =>
+        {
+            try
+            {
+                while (!stopping.Token.IsCancellationRequested)
+                {
+                    poller.Sample();
+                }
+            }
+            catch (Exception ex)
+            {
+                sampling = ex;
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "gpu-sample-hammer",
+        };
+
+        reader.Start();
+
+        // Let the reader get inside Sample at least once before the handle is closed under it.
+        await Task.Delay(50);
+
+        var disposing = Record.Exception(poller.Dispose);
+
+        // Keep sampling after the dispose too: a stopped poller must answer rather than fault.
+        await Task.Delay(50);
+        await stopping.CancelAsync();
+
+        reader.Join(TimeSpan.FromSeconds(10)).ShouldBeTrue("the sampling thread never finished");
+
+        sampling.ShouldBeNull($"Sample threw while another thread disposed: {sampling}");
+        disposing.ShouldBeNull($"Dispose threw while another thread sampled: {disposing}");
+        poller.Sample().ShouldBeEmpty("a disposed poller reports nothing rather than faulting");
+    }
+
+    /// <summary>
     /// There is no per-process GPU API: the PID lives in the counter instance name and nowhere else. This
     /// is the one piece of the sensor that is testable on every machine, which is why it is a separate,
     /// exhaustively covered function rather than three lines inside the read loop.
