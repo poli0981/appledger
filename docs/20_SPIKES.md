@@ -119,6 +119,16 @@ spike deliberately does not carry.
   would disagree with.
 - **Pass:** ≥ 95 % expected matches on fixtures, **0** game-into-launcher merges, ≤ 3 disagreements on the live dump,
   all `root:` fallbacks have confidence ≤ 0.6 and a sensible display name.
+- **Fixture half: PASS, 2026-10-30.** `IdentityResolver` landed with the full ten-step pipeline and the scoring test
+  reports **55/55 = 100.0 %** with **zero** games merged into a launcher. The run is the unit test
+  (`Category=S2`), so it is re-measured on every CI run rather than recorded once. Two findings came out of scoring
+  it, both doc fixes rather than code concessions: the Tier-0 check is the pipeline's last resort and not its first
+  gate, and a catalog rule matching only on `package_family` does not mint an id (`03_APP_IDENTITY.md`,
+  `24_ADR.md`).
+- **Still open.** The live-dump half (≤ 3 disagreements) needs `spikes/S2.Identity`, which does not exist yet, and
+  real indexes: the fixture half proves the pipeline against a synthetic machine, and the adapters that read the
+  registry and the launcher manifests are the next slice. So S2 is **not** PASS as a whole, and the roadmap's v0.3
+  exit criterion is not met by the fixture score alone.
 - **Fail →** the resolver is redesigned before any page that groups by app is built. Typical fixes: more host rules
   (data, not code), adoption rule tightening, better install-root boundaries.
 

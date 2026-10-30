@@ -1,3 +1,26 @@
+# 0.3.0 — unreleased
+
+Processes are grouped by the app they belong to, properly. `IdentityResolver` implements the ten-step
+pipeline of `docs/03_APP_IDENTITY.md`: host rules, package identity, launcher manifests, catalog rules, the
+Uninstall registry, package managers, parent adoption with a PID-reuse guard, PE metadata and the
+install-root fallback — with the precedence table deciding between them and the losers kept as aliases so a
+later merge stays cheap.
+
+The **S2 gate scores 55/55 (100 %)** on its fixture half, with zero games merged into their launcher, and it
+is a unit test rather than a one-off measurement, so every CI run re-measures it. Two of the three things
+still owed are named out loud: the adapters that build the indexes from the real registry and the real
+launcher manifests (until they land the Agent resolves with empty ones, so a Steam game gets `root:` rather
+than `steam:<appid>`), and the live-dump half of the gate, which needs a spike that does not exist yet.
+Tier-2 promotion of a protected game is the third.
+
+The version moves to 0.3.0 because that is the milestone being built, not because 0.2 is finished:
+the two 48-hour S1 runs are still owed and are still the last open item of v0.2.
+
+Scoring the gate found four things, and none of them was fixed by lowering the bar: seven of the fixture
+expectations were hand-typed hashes of nothing, the Tier-0 check turned out to belong at the end of the
+pipeline rather than the start, a catalog rule matching only on a package family must not mint an id, and a
+protected game's tier cannot be decided from its path. All four are in `docs/24_ADR.md`.
+
 # 0.2.0 — unreleased
 
 The Agent runs, the UI connects to it, and the two of them show live per-app numbers. First milestone with

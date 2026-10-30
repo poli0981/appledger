@@ -45,6 +45,7 @@ facts, and every expected `cat:` id exists in the shipped catalog. The scoring t
 
       "expect": "cat:chrome",                          // the id a correct resolver must produce
       "expectTier": null,                              // 2 for zero-touch cases
+      "tierNeedsPromotion": false,                     // true when only the 30-s promotion can reach it
       "expectConfidence": null,                        // set where the confidence table is the point
       "why": "signer + exe + install root all match the catalog rule"
     }
@@ -67,3 +68,15 @@ Unknown fields are rejected, so a typo fails loudly instead of silently weakenin
 - Paths use the `C:\Users\fixture\…` profile so nothing personal ever lands in the repo.
 - `cat:` expectations may name an `apps[].id` **or** an `anticheat[].id` — both mint `cat:<id>`
   (`docs/13_CATALOG_RULES.md` §Matching semantics).
+- **A hashed prefix names its input, not its hash.** Write `root:<D:\Tools>` or
+  `script:<C:\Work\build.ps1>`; the runner hashes it through `AppId`. The first draft of these fixtures carried
+  hand-typed hex that was a hash of nothing, so seven of the fifty-five expectations could never have matched and
+  the gate could not pass (`docs/24_ADR.md` §Findings). Writing the real hash in would have been worse — the gate
+  would then assert whatever the resolver produced. Naming the input keeps the claim checkable by eye: "the install
+  root of that image is `D:\Tools`" is something a reader can disagree with, and `AppId` is already tested for the
+  hashing.
+- **`tierNeedsPromotion` is an admission, and it has to be earned.** Set it only where `expectTier: 2` depends on
+  the dynamic promotion of `docs/11_SAFETY_POLICY.md` §Process access tiers — a protected game's own executable,
+  which carries no anti-cheat name and sits in no anti-cheat directory. The test
+  `Fixtures_PromotionOnlyClaimedWhereAnAntiCheatSignalExists` requires the same fixture to describe a driver or a
+  service, so the flag cannot be used to wave through an unrelated tier miss.

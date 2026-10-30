@@ -126,6 +126,7 @@
       "parentCreateTime": 3000,
       "expect": "steam:1091500",
       "expectTier": 2,
+      "tierNeedsPromotion": true,
       "why": "under a game root, so it is its own app - never merged into the launcher"
     },
     {

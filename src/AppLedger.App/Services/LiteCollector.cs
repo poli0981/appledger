@@ -41,6 +41,12 @@ public sealed class LiteCollector : IAsyncDisposable
         var folders = KnownFolders.Current;
         var policy = PolicyGuard.Create(catalog: null, dataRoot: null, folders: folders);
 
+        // Still the stand-in, and deliberately: the real resolver needs the catalog, and Lite mode does not
+        // load one - PolicyGuard above is built with `catalog: null` too. Verifying a signed catalog inside
+        // the unelevated UI process is its own decision (what a rejected catalog should do to a UI that is
+        // already the fallback), so it is not taken here. The visible consequence is that Lite mode groups
+        // by install root where the Agent groups by catalog rule; nothing is written either way, because
+        // Lite passes no repository.
         var resolver = new FallbackIdentityResolver(policy, new InstallRootHeuristic(InstallRootBoundaries.For(folders)));
         var registry = new InstanceRegistry(policy, new ProcessEnricher(), resolver);
 
