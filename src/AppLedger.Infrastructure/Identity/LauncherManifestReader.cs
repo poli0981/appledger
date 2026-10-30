@@ -83,24 +83,69 @@ public sealed class LauncherManifestReader
 
         foreach (var file in Files(manifests, "*.item"))
         {
-            if (ReadJson(file) is not { } root)
+            if (ParseEpicItem(file) is { } claim)
             {
-                continue;
-            }
-
-            // AppName, not DisplayName: docs/03 §app_id scheme is explicit that the id is the manifest's
-            // AppName, because a display name is localized and changes.
-            var name = String(root, "AppName");
-            var location = String(root, "InstallLocation");
-
-            if (name is not null && location is not null)
-            {
-                Add(entries, name, location, String(root, "DisplayName"));
+                Add(entries, claim.Id, claim.Location, claim.Name);
             }
         }
 
         return entries;
     }
+
+    /// <summary>
+    /// One Epic <c>.item</c> manifest, or null when it is not one. <c>AppName</c> rather than
+    /// <c>DisplayName</c>: docs/03 §app_id scheme is explicit that the id is the manifest's
+    /// <c>AppName</c>, because a display name is localized and changes under the app.
+    /// </summary>
+    /// <remarks>
+    /// Separated from <see cref="ReadEpic"/> so the parse can be tested without an Epic install, which is
+    /// the only part of it that can be wrong on a machine that has one.
+    /// </remarks>
+    internal static ManifestClaim? ParseEpicItem(string file)
+    {
+        if (ReadJson(file) is not { } root)
+        {
+            return null;
+        }
+
+        var name = String(root, "AppName");
+        var location = String(root, "InstallLocation");
+
+        return name is not null && location is not null
+            ? new ManifestClaim(name, location, String(root, "DisplayName"))
+            : null;
+    }
+
+    /// <summary>
+    /// The claim in one itch app directory, read from <c>.itch/receipt.json.gz</c> — which is where docs/03
+    /// says to look, because the directory name is the app's slug rather than the numeric game id the
+    /// <c>itch:</c> scheme uses.
+    /// </summary>
+    internal static ManifestClaim? ParseItchReceipt(string directory)
+    {
+        var receipt = Path.Combine(directory, ".itch", "receipt.json.gz");
+
+        if (ReadGzipJson(receipt) is not { } root
+            || !root.TryGetProperty("game", out var game)
+            || !game.TryGetProperty("id", out var id))
+        {
+            return null;
+        }
+
+        var value = id.ValueKind == JsonValueKind.Number
+            ? id.GetInt64().ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : id.GetString();
+
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : new ManifestClaim(value, directory, String(game, "title"));
+    }
+
+    /// <summary>What a manifest says, before path policy has had a look at it.</summary>
+    /// <param name="Id">The launcher's own identifier.</param>
+    /// <param name="Location">The directory the manifest claims, as written.</param>
+    /// <param name="Name">A display name, when the manifest carries one.</param>
+    internal readonly record struct ManifestClaim(string Id, string Location, string? Name);
 
     /// <summary>
     /// GOG applications, from <c>HKLM\SOFTWARE\GOG.com\Games</c>. The registry is used rather than a hunt
@@ -157,22 +202,9 @@ public sealed class LauncherManifestReader
 
         foreach (var directory in Directories(Path.Combine(roaming, "itch", "apps")))
         {
-            var receipt = Path.Combine(directory, ".itch", "receipt.json.gz");
-
-            if (ReadGzipJson(receipt) is not { } root
-                || !root.TryGetProperty("game", out var game)
-                || !game.TryGetProperty("id", out var id))
+            if (ParseItchReceipt(directory) is { } claim)
             {
-                continue;
-            }
-
-            var value = id.ValueKind == JsonValueKind.Number
-                ? id.GetInt64().ToString(System.Globalization.CultureInfo.InvariantCulture)
-                : id.GetString();
-
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                Add(entries, value, directory, String(game, "title"));
+                Add(entries, claim.Id, claim.Location, claim.Name);
             }
         }
 

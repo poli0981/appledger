@@ -182,8 +182,11 @@ jobs:
           # hold for a reporting tool run by hand. This is a scope decision, not a severity one.
           #
           # sonar.coverage.exclusions names the files whose real coverage comes from Category=Admin tests
-          # that CI is documented to skip: the Agent CLI entry point, the schtasks wrapper, the ETW hub, and
-          # WPF code-behind that CLAUDE.md allows no logic in. Without them Sonar's default gate applies an
+          # that CI is documented to skip, plus the host wiring: the Agent CLI entry point, everything under
+          # Agent/Hosting (AgentComposition opens a real database and loads a signed catalog, CollectorWorker
+          # is a BackgroundService - both are composition rather than logic, and docs/01 says the wiring
+          # ORDER is the design, which a test would assert by re-stating it), the schtasks wrapper, the ETW
+          # hub, and WPF code-behind that CLAUDE.md allows no logic in. Without them Sonar's default gate applies an
           # 80 % new-code coverage rule to code that cannot be covered without elevation, and contradicts
           # docs/18, where the 80 % gate is deliberately AppLedger.Core alone - "the part that decides what
           # every number means, and it runs anywhere without privileges". Coverage only: these files are
@@ -195,7 +198,7 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
             /d:sonar.cs.vstest.reportsPaths="**/*.trx" `
             /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs,spikes/**,tools/**" `
-            /d:sonar.coverage.exclusions="src/AppLedger.Agent/Program.cs,src/AppLedger.Agent/Tasks/SchTasks.cs,src/AppLedger.Infrastructure/Etw/EtwHub.cs,src/AppLedger.App/**/*.xaml.cs,src/AppLedger.App/App.xaml.cs"
+            /d:sonar.coverage.exclusions="src/AppLedger.Agent/Hosting/**,src/AppLedger.Agent/Program.cs,src/AppLedger.Agent/Tasks/SchTasks.cs,src/AppLedger.Infrastructure/Etw/EtwHub.cs,src/AppLedger.App/**/*.xaml.cs,src/AppLedger.App/App.xaml.cs"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           # TreatWarningsAsErrors is off for this build alone. `begin` injects SonarAnalyzer into the
