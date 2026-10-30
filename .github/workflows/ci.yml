@@ -186,7 +186,13 @@ jobs:
           # Agent/Hosting (AgentComposition opens a real database and loads a signed catalog, CollectorWorker
           # is a BackgroundService - both are composition rather than logic, and docs/01 says the wiring
           # ORDER is the design, which a test would assert by re-stating it), the schtasks wrapper, the ETW
-          # hub, and WPF code-behind that CLAUDE.md allows no logic in. Without them Sonar's default gate applies an
+          # hub, the GPU poller, and WPF code-behind that CLAUDE.md allows no logic in.
+          #
+          # The GPU poller is the clearest case of the shape: docs/19_TESTING.md already records that its
+          # wildcard parse is "skipped if no GPU counters, e.g. hosted runner". A hosted runner has none, so
+          # CI covers the unavailable branches and never the sampling ones, while a dev box with a GPU covers
+          # the opposite. No single machine covers both, and the number CI reports is therefore a statement
+          # about the runner rather than about the code. Without them Sonar's default gate applies an
           # 80 % new-code coverage rule to code that cannot be covered without elevation, and contradicts
           # docs/18, where the 80 % gate is deliberately AppLedger.Core alone - "the part that decides what
           # every number means, and it runs anywhere without privileges". Coverage only: these files are
@@ -198,7 +204,7 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
             /d:sonar.cs.vstest.reportsPaths="**/*.trx" `
             /d:sonar.exclusions="src/AppLedger.App/Resources/Strings.cs,spikes/**,tools/**" `
-            /d:sonar.coverage.exclusions="src/AppLedger.Agent/Hosting/**,src/AppLedger.Agent/Program.cs,src/AppLedger.Agent/Tasks/SchTasks.cs,src/AppLedger.Infrastructure/Etw/EtwHub.cs,src/AppLedger.App/**/*.xaml.cs,src/AppLedger.App/App.xaml.cs"
+            /d:sonar.coverage.exclusions="src/AppLedger.Agent/Hosting/**,src/AppLedger.Agent/Program.cs,src/AppLedger.Agent/Tasks/SchTasks.cs,src/AppLedger.Infrastructure/Etw/EtwHub.cs,src/AppLedger.Infrastructure/Gpu/GpuPoller.cs,src/AppLedger.App/**/*.xaml.cs,src/AppLedger.App/App.xaml.cs"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           # TreatWarningsAsErrors is off for this build alone. `begin` injects SonarAnalyzer into the
