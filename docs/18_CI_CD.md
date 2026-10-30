@@ -5,7 +5,8 @@ ops repo `poli0981/.github`; that was reverted at kickoff (`24_ADR.md` §Finding
 reusable workflows did not exist under the names used, the one that did takes a different input set, and its
 C# CodeQL job runs on `ubuntu-latest`, which cannot build the four `net10.0-windows` projects. Owning the
 pipelines here keeps the gates below enforceable rather than aspirational. Action versions match the ones the
-ops repo has verified (`checkout@v7`, `setup-dotnet@v5`, `upload-artifact@v7`, `codeql-action@v4`).
+ops repo has verified (`checkout@v7`, `setup-dotnet@v6`, `setup-java@v6`, `upload-artifact@v7`,
+`codeql-action@v4`).
 
 Every workflow declares `permissions:` explicitly and narrowly.
 
@@ -13,7 +14,7 @@ Every workflow declares `permissions:` explicitly and narrowly.
 
 | File | Trigger | Runner | Permissions | What it does |
 |---|---|---|---|---|
-| `ci.yml` | push `main`, PRs | `windows-latest` | `contents: read` | locked restore, format check, build, filtered test with coverage, coverage gate, vulnerability gate, artifacts; plus a build-only ARM64 job |
+| `ci.yml` | push `main`, PRs | `windows-latest` | `contents: read` | locked restore, format check, build, filtered test with coverage, coverage gate, vulnerability gate, artifacts; plus a build-only ARM64 job and a SonarCloud job |
 | `codeql.yml` | push/PR `main`, weekly | `windows-latest` | `actions: read`, `contents: read`, `security-events: write` | traced C# build, CodeQL analyze |
 | `release.yml` | tag `v*` | `windows-latest` | `contents: write` | test, publish App + Agent into one folder, `vpk pack`, checksums, GitHub Release |
 | `notify.yml` | release published | `ubuntu-latest` | `contents: read` | posts title + URL to Discord; skips when `DISCORD_WEBHOOK` is unset |
@@ -35,7 +36,20 @@ WPF and the WinRT projections do not build on Linux, so everything except the no
   when it finds something, so the step greps for the `>` rows and fails the build itself. This gate caught a
   high-severity SQLitePCLRaw advisory on the first run (`24_ADR.md`).
 - **ARM64** — a build-only job. ARM64 is a supported target (NFR-6) with its own Velopack channel, and an
-  x64 runner cannot execute ARM64 test binaries, so building is all CI can honestly do.
+  x64 runner cannot execute ARM64 test binaries, so building is all CI can honestly do. Its restore carries
+  `-p:Platform=ARM64` as well as its build: the `win-arm64` apphost pack is acquired during restore, and a
+  restore that ran for x64 leaves the build with no `apphost.exe` to copy (`MSB3030`). It was silently fine
+  until the SDK moved far enough forward to select the apphost by `PlatformTarget` (`24_ADR.md` §Findings).
+- **SonarCloud** — a separate job, and **not** a required check: an outage at Sonar must not be able to block
+  a merge. It analyses C# through the **MSBuild scanner** (`begin` → build → test → `end`), because the C#
+  analyzer needs a real compilation; Automatic Analysis, which the project used first, reads sources without
+  one and can import no coverage at all. Coverage goes up as **OpenCover** — the format Sonar's C# plugin
+  reads — while `build-test` keeps collecting Cobertura for the 80 % gate, so the two never contend for one
+  file. The job skips on Dependabot and fork pull requests, which are not given secrets; the check being
+  **absent** on those PRs is the design, not a failure. Project `poli0981_appledger`, org `poli0981`.
+
+  Automatic Analysis and CI analysis are mutually exclusive: SonarCloud rejects a scanner run while
+  Automatic Analysis is still enabled for the project (Administration → Analysis Method).
 
 The catalog schema tests (`Category=Catalog`) and the repository guards run inside the normal test pass; they
 need no separate job. XamlStyler is not wired yet — there is no XAML worth checking until the v0.2 shell.
@@ -88,6 +102,7 @@ history.
 |---|---|---|
 | `CATALOG_MINISIGN_KEY`, `CATALOG_MINISIGN_PASSWORD` | `release.yml` (not yet wired) | signing the catalog at release |
 | `DISCORD_WEBHOOK` | `notify.yml` | release announcements; absent = the job skips |
+| `SONAR_TOKEN` | `ci.yml` job `sonar` | SonarCloud analysis; unavailable on Dependabot and fork PRs, where the job skips |
 
 `GITHUB_TOKEN` is the built-in token; no PAT is needed. There is no code-signing certificate
 (`16_PACKAGING_AND_UPDATES.md` §Code signing).

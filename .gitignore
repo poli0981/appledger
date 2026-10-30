@@ -17,3 +17,4 @@ logs/
 *.metaproj.tmp
 s1-*.csv
 .DS_Store
+smoke*.csv
