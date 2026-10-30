@@ -285,6 +285,11 @@ public sealed class IdentityResolver : IIdentityResolver
                 Confidence = Confidence.Adopted(parent.Result.Confidence),
                 DecidedBy = ResolutionStep.HostRule,
                 DisplayName = parent.Result.DisplayName,
+
+                // Cleared, as in Adopt: the parent's aliases describe how the *parent* was identified, and
+                // the app row they belong to was already written from it. Carrying them down every child
+                // would rewrite the same list once per instance and say nothing new about this one.
+                Aliases = [],
                 Evidence = [new IdentityEvidence(ResolutionStep.HostRule, "attached to parent")],
             },
             parent.MatchedApp,
@@ -407,7 +412,8 @@ public sealed class IdentityResolver : IIdentityResolver
             candidates.Add(new Candidate(
                 AppId.Catalog(app.App.Id), AppSource.Catalog, Confidence.CatalogRule, ResolutionStep.CatalogRule,
                 kind == CatalogMatchKind.Helper ? "catalog helper of " + app.App.Id : "catalog rule " + app.App.Id,
-                app.App.Name));
+                app.App.Name,
+                app));
         }
     }
 
@@ -467,7 +473,11 @@ public sealed class IdentityResolver : IIdentityResolver
                 Aliases = aliases,
                 Evidence = [.. candidates.Select(c => new IdentityEvidence(c.Step, c.Why))],
             },
-            matchedApp,
+            // The app that produced the *winning* id, not whichever matched first. They differ only when
+            // two catalog entries claim one process, which AND-across-kinds makes rare - but "is my parent
+            // a Launcher?" is answered from this, and answering it from a losing match would be wrong in
+            // exactly the case the S2 gate exists to catch.
+            winner.App ?? matchedApp,
             installRoot);
     }
 
@@ -489,9 +499,11 @@ public sealed class IdentityResolver : IIdentityResolver
             && (PathRules.IsUnder(facts.ImagePath, parent.InstallRoot)
                 || PathRules.SamePath(installRoot, parent.InstallRoot));
 
-        var parentIsLauncher = parent.MatchedApp is { IsLauncher: true };
-
-        if (!underParentRoot && !parentIsLauncher)
+        // All three alternatives in docs/03 adoption rule 2 require the child to be under *some* root, and
+        // for a launcher the launcher root *is* the parent's install root - so the launcher clause adds no
+        // reach of its own, only the emphasis that a separate game root does not count. That part is
+        // already handled: a game has a manifest identity and never reaches adoption at all.
+        if (!underParentRoot)
         {
             return null;
         }
@@ -547,6 +559,12 @@ public sealed class IdentityResolver : IIdentityResolver
 
     // --- Overrides -------------------------------------------------------------------------------
 
+    /// <summary>
+    /// The first override that claims this process. <see cref="OverrideKind"/> is deliberately not consulted:
+    /// a merge and a split both answer "this instance belongs to that app", and they differ only in what the
+    /// UI did to get there and in the <c>previous_app_id</c> it keeps for the undo window
+    /// (docs/03_APP_IDENTITY.md §User overrides).
+    /// </summary>
     private static IdentityOverride? FindOverride(ProcessFacts facts, IdentityContext ctx)
     {
         foreach (var rule in ctx.Overrides)
@@ -719,7 +737,13 @@ public sealed class IdentityResolver : IIdentityResolver
 
     /// <summary>One identity a step proposed, before precedence picks between them.</summary>
     private readonly record struct Candidate(
-        AppId Id, AppSource Source, double Confidence, ResolutionStep Step, string Why, string? Name);
+        AppId Id,
+        AppSource Source,
+        double Confidence,
+        ResolutionStep Step,
+        string Why,
+        string? Name,
+        CompiledApp? App = null);
 
     /// <summary>A game a launcher manifest claims, used by the anti-cheat rule.</summary>
     private readonly record struct LauncherGame(AppId Id, AppSource Source, string? Name);
