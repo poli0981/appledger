@@ -148,6 +148,41 @@ internal static class FixtureEnvironment
         ];
     }
 
+    /// <summary>
+    /// The same fixture resolved from the facts the <i>collector</i> supplies, which are not the facts these
+    /// fixtures carry. <c>InstanceRegistry</c> builds a <see cref="ProcessFacts"/> from the process table and
+    /// one <c>PROCESS_QUERY_LIMITED_INFORMATION</c> handle: key, image name, image path, command line,
+    /// package family, parent and tier — and **no signer and no PE metadata**, because docs/03 §Metadata
+    /// enrichment reads those once per <c>(app_id, version)</c>, which is after resolution rather than
+    /// before it.
+    /// </summary>
+    /// <remarks>
+    /// This exists so a claim about the shipping Agent is asserted rather than believed. Most catalog app
+    /// rules name a signer, and AND-across-kinds means a rule that names one cannot match without it — so
+    /// the Agent reaches a different, lower-precedence identity than the gate does, and saying which is the
+    /// honest way to describe what it does (docs/24_ADR.md §Findings).
+    /// </remarks>
+    public static IReadOnlyList<(FixtureProcess Process, ResolutionResult Result)> ResolveAllAsTheCollectorWould(
+        IdentityFixture fixture)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+
+        var resolver = ResolverFor(fixture);
+
+        return
+        [
+            .. fixture.Processes
+                .OrderBy(p => p.CreateTime)
+                .Select(p => (p, resolver.Resolve(FactsOf(p) with
+                {
+                    Signer = null,
+                    ProductName = null,
+                    CompanyName = null,
+                    FileDescription = null,
+                }))),
+        ];
+    }
+
     private static IdentityIndexes IndexesOf(IdentityFixture fixture) => new()
     {
         Uninstall =

@@ -7,11 +7,22 @@ install-root fallback — with the precedence table deciding between them and th
 later merge stays cheap.
 
 The **S2 gate scores 55/55 (100 %)** on its fixture half, with zero games merged into their launcher, and it
-is a unit test rather than a one-off measurement, so every CI run re-measures it. Two of the three things
-still owed are named out loud: the adapters that build the indexes from the real registry and the real
-launcher manifests (until they land the Agent resolves with empty ones, so a Steam game gets `root:` rather
-than `steam:<appid>`), and the live-dump half of the gate, which needs a spike that does not exist yet.
-Tier-2 promotion of a protected game is the third.
+is a unit test rather than a one-off measurement, so every CI run re-measures it.
+
+The indexes behind it are real too: the Uninstall keys across all three registry views, Steam's libraries and
+app manifests, Epic's `.item` manifests, GOG's registry entries, itch's receipts, and the Scoop and
+Chocolatey layouts — read on this machine as 146 uninstall entries, 44 Steam games across two libraries, and
+21 Chocolatey packages. Every path they store goes through `PolicyGuard`. Two bugs found along the way had
+each been hiding the other: the collector never passed the parent to the resolver, and it resolved new
+processes in snapshot order rather than by create time, so adoption could not have worked even once either
+was fixed alone.
+
+What AppLedger actually calls your apps today, asserted by a test rather than claimed: a Steam game is
+`steam:<appid>`, Windows Terminal is `msix:…`, a service host is `sys:service:<name>`, `git.exe` is
+`uninst:git-is1` — and **Chrome is `uninst:google-chrome` rather than `cat:chrome`**, because the collector
+does not read a signature before resolving and twelve of the seventeen catalog rules name a signer. Lower
+precedence, not wrong, and the confidence drops from 0.95 to 0.90 to say so. That signer source is the next
+piece, along with the live-dump half of the S2 gate and Tier-2 promotion of a protected game.
 
 The version moves to 0.3.0 because that is the milestone being built, not because 0.2 is finished:
 the two 48-hour S1 runs are still owed and are still the last open item of v0.2.
