@@ -70,7 +70,7 @@
     <!-- Windows / collection -->
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.4" />  <!-- [checked 2026-08-22] -->
     <PackageVersion Include="Microsoft.Windows.CsWin32" Version="0.3.298" />                      <!-- [checked 2026-08-22] -->
-    <PackageVersion Include="MaxMind.Db" Version="4.2.0" />
+    <PackageVersion Include="MaxMind.Db" Version="5.2.0" />
     <PackageVersion Include="NSec.Cryptography" Version="26.4.0" />                           <!-- minisign verification (docs/13) -->
     <!-- Packaging -->
     <PackageVersion Include="Velopack" Version="1.2.161" />                                   <!-- [checked 2026-08-22] -->
